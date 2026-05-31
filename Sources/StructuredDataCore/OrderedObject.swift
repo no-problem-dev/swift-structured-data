@@ -38,11 +38,34 @@ public struct OrderedObject: Sendable, Hashable {
     public var isEmpty: Bool { entries.isEmpty }
 
     public subscript(key: String) -> StructuredValue? {
-        entries.first { $0.key == key }?.value
+        get { entries.first { $0.key == key }?.value }
+        set {
+            if let newValue {
+                if let index = entries.firstIndex(where: { $0.key == key }) {
+                    entries[index].value = newValue
+                } else {
+                    entries.append((key, newValue))
+                }
+            } else {
+                entries.removeAll { $0.key == key }
+            }
+        }
     }
 
     public mutating func append(key: String, value: StructuredValue) {
         entries.append((key, value))
+    }
+
+    /// 指定キーのエントリを削除し、その値を返す（存在しなければ nil）。
+    @discardableResult
+    public mutating func removeValue(forKey key: String) -> StructuredValue? {
+        guard let index = entries.firstIndex(where: { $0.key == key }) else { return nil }
+        return entries.remove(at: index).value
+    }
+
+    /// Swift 標準辞書ビュー（順序は失われる）。順序が必要なら `entries` を使う。
+    public var dictionary: [String: StructuredValue] {
+        Dictionary(entries.map { ($0.key, $0.value) }, uniquingKeysWith: { _, last in last })
     }
 
     /// Builds an object from raw entries, applying the duplicate-name policy.
