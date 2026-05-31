@@ -1,3 +1,4 @@
+import Foundation
 /// Mutable node used while an `Encoder` builds up a result tree.
 final class ValueRef {
     enum Storage {
@@ -72,6 +73,7 @@ extension EncodingOptions {
     /// Encodes a single `Encodable` into an immutable `StructuredValue`.
     func lower<T: Encodable>(_ value: T, codingPath: [CodingKey]) throws -> StructuredValue {
         if let value = value as? StructuredValue { return value }
+        if let date = value as? Date, dateStrategy.interceptsDate { return dateStrategy.encode(date) }
         let encoder = ValueEncoder(options: self, codingPath: codingPath)
         try value.encode(to: encoder)
         return encoder.finalize()

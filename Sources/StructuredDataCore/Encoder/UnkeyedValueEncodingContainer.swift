@@ -26,9 +26,8 @@ struct UnkeyedValueEncodingContainer: UnkeyedEncodingContainer {
     mutating func encode(_ value: UInt64) throws { append(ScalarEncoder.number(String(value))) }
 
     mutating func encode<T: Encodable>(_ value: T) throws {
-        let slot = ValueRef(.scalar(.null))
-        array.elements.append(slot)
-        try value.encode(to: ValueEncoder(options: options, codingPath: codingPath + [IndexKey(count - 1)], root: slot))
+        let lowered = try options.lower(value, codingPath: codingPath + [IndexKey(count)])
+        array.elements.append(ValueRef(.scalar(lowered)))
     }
 
     mutating func nestedContainer<NestedKey: CodingKey>(

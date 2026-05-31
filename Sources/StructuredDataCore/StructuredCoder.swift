@@ -3,7 +3,7 @@ import Foundation
 extension StructuredValue {
     /// Decodes this value into a concrete `Decodable` type via the shared backbone.
     public func decode<T: Decodable>(_ type: T.Type, options: DecodingOptions = .init()) throws -> T {
-        try T(from: ValueDecoder(value: self, options: options))
+        try decodeScalar(type, options: options, codingPath: [])
     }
 
     /// Builds a value from any `Encodable`.
@@ -31,7 +31,7 @@ public struct StructuredDecoder<Parser: DataParser>: StructuredDecoding {
     }
 
     public func decode<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
-        try T(from: ValueDecoder(value: parser.parse(data), options: options))
+        try parser.parse(data).decodeScalar(type, options: options, codingPath: [])
     }
 }
 

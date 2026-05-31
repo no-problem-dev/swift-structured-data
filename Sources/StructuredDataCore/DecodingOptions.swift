@@ -30,8 +30,10 @@ public struct DecodingOptions: Sendable {
     }
 
     public var keyStrategy: KeyStrategy
+    public var dateStrategy: DateCodingStrategy
 
-    public init(keyStrategy: KeyStrategy = .useDefaultKeys) {
+    public init(keyStrategy: KeyStrategy = .useDefaultKeys, dateStrategy: DateCodingStrategy = .deferredToDate) {
         self.keyStrategy = keyStrategy
+        self.dateStrategy = dateStrategy
     }
 }

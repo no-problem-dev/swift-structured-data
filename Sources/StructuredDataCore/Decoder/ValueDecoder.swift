@@ -1,3 +1,4 @@
+import Foundation
 /// A `Decoder` whose source is a `StructuredValue`.
 ///
 /// This is the backbone that makes "dynamic value to static type" work for any
@@ -60,6 +61,9 @@ extension StructuredValue {
     func decodeScalar<T>(_ type: T.Type, options: DecodingOptions, codingPath: [CodingKey]) throws -> T where T: Decodable {
         if type == StructuredValue.self {
             return self as! T
+        }
+        if type == Date.self, options.dateStrategy.interceptsDate {
+            return try options.dateStrategy.decode(self) as! T
         }
         return try T(from: ValueDecoder(value: self, options: options, codingPath: codingPath))
     }

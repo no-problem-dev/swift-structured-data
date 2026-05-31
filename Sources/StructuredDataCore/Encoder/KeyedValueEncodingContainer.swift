@@ -26,9 +26,8 @@ struct KeyedValueEncodingContainer<Key: CodingKey>: KeyedEncodingContainerProtoc
     mutating func encode(_ value: UInt64, forKey key: Key) throws { append(key, ScalarEncoder.number(String(value))) }
 
     mutating func encode<T: Encodable>(_ value: T, forKey key: Key) throws {
-        let slot = ValueRef(.scalar(.null))
-        object.entries.append((name(key), slot))
-        try value.encode(to: ValueEncoder(options: options, codingPath: codingPath + [key], root: slot))
+        let lowered = try options.lower(value, codingPath: codingPath + [key])
+        object.entries.append((name(key), ValueRef(.scalar(lowered))))
     }
 
     mutating func nestedContainer<NestedKey: CodingKey>(
