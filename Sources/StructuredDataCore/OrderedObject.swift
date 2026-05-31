@@ -27,6 +27,12 @@ public struct OrderedObject: Sendable, Hashable {
         self.entries = entries
     }
 
+    /// Builds from a Swift dictionary. Insertion order is unspecified (JSON
+    /// objects are unordered), so use the entries initializer when order matters.
+    public init(_ dictionary: [String: StructuredValue]) {
+        self.entries = dictionary.map { ($0.key, $0.value) }
+    }
+
     public var keys: [String] { entries.map(\.key) }
     public var count: Int { entries.count }
     public var isEmpty: Bool { entries.isEmpty }
