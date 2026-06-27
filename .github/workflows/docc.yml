@@ -33,7 +33,8 @@ jobs:
         run: |
           swift package --allow-writing-to-directory ./docs \
             generate-documentation \
-            --target StructuredDataCore \
+            --enable-experimental-combined-documentation \
+            --target StructuredDataCore --target JSONParsing --target YAMLParsing --target XMLCoding \
             --disable-indexing \
             --transform-for-static-hosting \
             --hosting-base-path swift-structured-data \
