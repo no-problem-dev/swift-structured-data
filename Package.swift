@@ -16,6 +16,9 @@ let package = Package(
         .library(name: "YAMLParsing", targets: ["YAMLParsing"]),
         .library(name: "XMLCoding", targets: ["XMLCoding"]),
     ],
+    dependencies: [
+        .package(url: "https://github.com/swiftlang/swift-docc-plugin", from: "1.4.0"),
+    ],
     targets: [
         .target(name: "StructuredDataCore"),
         .target(name: "JSONParsing", dependencies: ["StructuredDataCore"]),
