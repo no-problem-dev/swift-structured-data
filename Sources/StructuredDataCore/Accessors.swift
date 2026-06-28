@@ -39,15 +39,28 @@ extension StructuredValue {
 /// Key-based typed accessors for object values, with numeric coercion so that a
 /// `65.0` delivered where an `Int` is expected still reads (matching how LLM
 /// tool arguments often arrive).
+///
+/// Each method looks up `key` in the receiver (which must be `.object`), then
+/// attempts the typed extraction. Returns `nil` when the key is absent, the
+/// value is `.null`, or the type does not match.
 extension StructuredValue {
+    /// The string value at `key`, or `nil` if absent or not a string.
     public func string(_ key: String) -> String? { self[key].stringValue }
+    /// The boolean value at `key`, or `nil` if absent or not a bool.
     public func bool(_ key: String) -> Bool? { self[key].boolValue }
+    /// The integer value at `key`, accepting fractional text like `65.0` by truncation.
     public func int(_ key: String) -> Int? { self[key].numberValue?.coercedInt }
+    /// The double value at `key`, or `nil` if absent or not a number.
     public func double(_ key: String) -> Double? { self[key].numberValue?.double }
+    /// The array value at `key`, or `nil` if absent or not an array.
     public func array(_ key: String) -> [StructuredValue]? { self[key].arrayValue }
+    /// The object value at `key`, or `nil` if absent or not an object.
     public func object(_ key: String) -> OrderedObject? { self[key].objectValue }
+    /// The string elements of the array at `key`, skipping non-string entries.
     public func stringArray(_ key: String) -> [String]? { self[key].arrayValue?.compactMap(\.stringValue) }
+    /// `true` when `key` is present and its value is not `.null`.
     public func has(_ key: String) -> Bool { objectValue?[key] != nil }
+    /// The keys of this object, or an empty array if the value is not an object.
     public var keys: [String] { objectValue?.keys ?? [] }
 }
 

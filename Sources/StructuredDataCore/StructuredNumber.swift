@@ -22,8 +22,11 @@ public struct StructuredNumber: Sendable, Hashable {
         self.text = text
     }
 
+    /// The value as `Int`, or `nil` if the text does not represent an exact integer.
     public var int: Int? { Int(text) }
+    /// The value as `Int64`, or `nil` if the text does not represent an exact 64-bit integer.
     public var int64: Int64? { Int64(text) }
+    /// The value as `UInt64`, or `nil` if the text does not represent an exact unsigned 64-bit integer.
     public var uint64: UInt64? { UInt64(text) }
 
     /// The value as a `Decimal`, preserving more precision than `Double` for in-range values.

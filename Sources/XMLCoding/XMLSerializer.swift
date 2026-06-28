@@ -69,6 +69,7 @@ public struct XMLSerializer: Sendable {
         output += "\n" + String(repeating: options.indent, count: depth)
     }
 
+    /// Escapes `&`, `<`, and `>` so `text` is safe in XML element content.
     public static func escapeText(_ text: String) -> String {
         var result = ""
         result.reserveCapacity(text.count)
@@ -83,6 +84,7 @@ public struct XMLSerializer: Sendable {
         return result
     }
 
+    /// Escapes `&`, `<`, `>`, and `"` so `text` is safe in a double-quoted XML attribute value.
     public static func escapeAttribute(_ text: String) -> String {
         var result = escapeText(text)
         result = result.replacingOccurrences(of: "\"", with: "&quot;")

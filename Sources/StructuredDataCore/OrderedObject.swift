@@ -56,14 +56,14 @@ public struct OrderedObject: Sendable, Hashable {
         entries.append((key, value))
     }
 
-    /// 指定キーのエントリを削除し、その値を返す（存在しなければ nil）。
+    /// Removes the entry for the given key and returns its value, or `nil` if the key is absent.
     @discardableResult
     public mutating func removeValue(forKey key: String) -> StructuredValue? {
         guard let index = entries.firstIndex(where: { $0.key == key }) else { return nil }
         return entries.remove(at: index).value
     }
 
-    /// Swift 標準辞書ビュー（順序は失われる）。順序が必要なら `entries` を使う。
+    /// A standard Swift dictionary view (insertion order is lost). Use `entries` when order matters.
     public var dictionary: [String: StructuredValue] {
         Dictionary(entries.map { ($0.key, $0.value) }, uniquingKeysWith: { _, last in last })
     }
