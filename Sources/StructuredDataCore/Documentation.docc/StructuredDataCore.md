@@ -4,7 +4,7 @@ Format-neutral structured data representation and Codable bridge shared by JSON,
 
 ## Overview
 
-`StructuredDataCore` defines the intermediate representation that all format parsers converge on: ``StructuredValue``. Every parser in the library produces a `StructuredValue`, and the single decoding backbone turns it into any `Decodable` type — so swapping JSON for YAML at the call site requires changing only one import.
+`StructuredDataCore` defines the intermediate representation that all format parsers converge on: ``StructuredValue``. Every format module in this package — `JSONParsing`, `YAMLParsing`, and `XMLCoding` — produces or consumes a `StructuredValue`, and the single decoding backbone in `StructuredDataCore` turns it into any `Decodable` type. Swapping JSON for YAML at the call site requires changing only one import.
 
 ```swift
 import StructuredDataCore
@@ -33,6 +33,8 @@ func load<T: Decodable>(_ type: T.Type, from data: Data, using decoder: any Stru
     try decoder.decode(type, from: data)
 }
 ```
+
+The four modules divide responsibilities as follows. `StructuredDataCore` owns the neutral intermediate representation and the `Codable` bridge — it is the only dependency the other three modules share. `JSONParsing` provides `JSONDecoder` and `JSONEncoder` for ordinary REST/LLM payloads, `JSONParser` for direct `StructuredValue` access, and `StreamingJSONParser` for token-by-token LLM output. `YAMLParsing` covers YAML 1.2 Core-schema documents via `YAMLDecoder` and `YAMLParser`, plus a matching `YAMLSerializer` for round-tripping. `XMLCoding` takes a different approach: it preserves the full XML tree — elements, attributes, mixed content, CDATA — through `XMLDocumentParser`, `XMLElement`, and `XMLBuilder`, rather than flattening XML into `StructuredValue`.
 
 ## Topics
 
