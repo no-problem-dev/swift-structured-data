@@ -1,11 +1,10 @@
 import StructuredDataCore
 
-/// Resolves a plain (unquoted) scalar to a typed value using the YAML 1.2 Core
-/// schema.
+/// YAML 1.2 Core スキーマを用いてプレイン（非クォート）スカラーを型付き値へ解決する。
 ///
-/// Core, unlike YAML 1.1, treats `yes/no/on/off` and `NO` as strings — the
-/// "Norway problem" is fixed. Booleans are only `true`/`false` (any case),
-/// integers support `0o` octal and `0x` hex, and `~`/`null`/empty are null.
+/// YAML 1.1 と異なり Core では `yes/no/on/off` や `NO` は文字列として扱われ、「ノルウェー問題」が解消されている。
+/// Bool は `true`/`false`（大文字小文字不問）のみ。整数は `0o` 八進数と `0x` 十六進数をサポート。
+/// `~`、`null`、空文字列はヌルとして解釈する。
 enum YAMLScalarResolver {
     static func resolve(_ text: String) -> StructuredValue {
         switch text {

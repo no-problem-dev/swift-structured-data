@@ -1,14 +1,12 @@
 import Foundation
 
-/// Construction and Foundation-bridging helpers.
+/// 構築用ファクトリと Foundation ブリッジングのヘルパー。
 ///
-/// The `int`/`double` factories let call sites build numbers without spelling
-/// out `StructuredNumber`, and ``anyValue`` bridges to the JSONSerialization-style
-/// `Any` graph for interop with existing APIs.
+/// `int`/`double` ファクトリにより、コールサイトで `StructuredNumber` を明示せずに数値を構築できる。
+/// ``anyValue`` は既存 API との相互運用のために JSONSerialization スタイルの `Any` グラフへブリッジする。
 ///
-/// There is deliberately no `object([String:_])` factory: it would be ambiguous
-/// with the `object(OrderedObject)` case, since `OrderedObject` is itself
-/// `ExpressibleByDictionaryLiteral`. Use a dictionary literal or `OrderedObject`.
+/// `object([String:_])` ファクトリは意図的に存在しない。`OrderedObject` 自体が `ExpressibleByDictionaryLiteral` のため
+/// `object(OrderedObject)` case と曖昧になる。辞書リテラルか `OrderedObject` を使うこと。
 extension StructuredValue {
     public static func int(_ value: some BinaryInteger) -> StructuredValue {
         .number(StructuredNumber(unchecked: String(value)))
@@ -18,8 +16,7 @@ extension StructuredValue {
         .number(StructuredNumber(unchecked: String(value)))
     }
 
-    /// A JSONSerialization-compatible `Any` representation
-    /// (`NSNull`/`Bool`/`Int`/`Double`/`String`/`[Any]`/`[String: Any]`).
+    /// JSONSerialization 互換の `Any` 表現（`NSNull`/`Bool`/`Int`/`Double`/`String`/`[Any]`/`[String: Any]`）。
     public var anyValue: Any {
         switch self {
         case .null: return NSNull()
@@ -32,7 +29,7 @@ extension StructuredValue {
         }
     }
 
-    /// Builds a value from a JSONSerialization-style `Any` graph.
+    /// JSONSerialization スタイルの `Any` グラフから値を構築する。
     public init(anyValue: Any) {
         if anyValue is NSNull { self = .null; return }
         if let number = anyValue as? NSNumber {

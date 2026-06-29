@@ -1,7 +1,7 @@
 import Foundation
 import StructuredDataCore
 
-/// Serializes a ``StructuredValue`` into RFC 8259 JSON bytes.
+/// ``StructuredValue`` を RFC 8259 JSON バイト列へシリアライズする。
 public struct JSONSerializer: DataSerializer {
     public struct Options: Sendable {
         public var prettyPrinted: Bool

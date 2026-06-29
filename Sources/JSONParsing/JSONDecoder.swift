@@ -1,11 +1,10 @@
 import Foundation
 import StructuredDataCore
 
-/// JSON entry point for the consumer-facing decode contract.
+/// 消費者向けデコードプロトコルへの JSON エントリポイント。
 ///
-/// A thin composition of ``JSONParser`` (Layer 1) and the shared decoding
-/// backbone (Layer 2). Inject it as `any StructuredDecoding` so call sites stay
-/// format-agnostic.
+/// ``JSONParser``（Layer 1）と共有デコードバックボーン（Layer 2）の薄い合成体。
+/// `any StructuredDecoding` として注入することでコールサイトをフォーマット非依存に保てる。
 public struct JSONDecoder: StructuredDecoding {
     public var parsingOptions: JSONParsingOptions
     public var decodingOptions: DecodingOptions
@@ -28,7 +27,7 @@ public struct JSONDecoder: StructuredDecoding {
     }
 }
 
-/// JSON entry point for the consumer-facing encode contract.
+/// 消費者向けエンコードプロトコルへの JSON エントリポイント。
 public struct JSONEncoder: StructuredEncoding {
     public var encodingOptions: EncodingOptions
     public var serializerOptions: JSONSerializer.Options

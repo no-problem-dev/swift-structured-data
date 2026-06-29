@@ -1,38 +1,35 @@
 import Foundation
 
-/// A JSON-grammar number preserved as its original decimal text.
+/// JSON 文法の数値を元の十進テキストのまま保持する型。
 ///
-/// JSON numbers have no defined precision and no integer/real distinction, so
-/// eagerly converting to `Double` loses information for values such as
-/// `9223372036854775808` or `0.1`. `StructuredNumber` keeps the source text and
-/// defers conversion until a concrete Swift type is requested, mirroring Go's
-/// `json.Number` and serde's arbitrary-precision mode.
+/// JSON 数値には定義済み精度も整数/実数の区別もないため、`Double` に即変換すると `9223372036854775808` や `0.1` のような値で情報が失われる。
+/// `StructuredNumber` はソーステキストを保持し、具体的な Swift 型が要求されるまで変換を遅延する。Go の `json.Number` や serde の任意精度モードに倣った設計。
 public struct StructuredNumber: Sendable, Hashable {
-    /// The original textual representation, guaranteed to match the JSON number grammar.
+    /// JSON 数値文法に準拠することが保証された元のテキスト表現。
     public let text: String
 
-    /// Wraps text already known to be a valid JSON number (e.g. produced by a parser).
+    /// JSON 数値として妥当であることが既知のテキストをラップする（パーサが生成した値など）。
     public init(unchecked text: String) {
         self.text = text
     }
 
-    /// Wraps text only if it conforms to the JSON number grammar.
+    /// JSON 数値文法に準拠する場合のみテキストをラップする。
     public init?(validating text: String) {
         guard StructuredNumber.isValid(text) else { return nil }
         self.text = text
     }
 
-    /// The value as `Int`, or `nil` if the text does not represent an exact integer.
+    /// `Int` として取り出した値。テキストが正確な整数を表さない場合は `nil`。
     public var int: Int? { Int(text) }
-    /// The value as `Int64`, or `nil` if the text does not represent an exact 64-bit integer.
+    /// `Int64` として取り出した値。テキストが正確な 64 ビット整数を表さない場合は `nil`。
     public var int64: Int64? { Int64(text) }
-    /// The value as `UInt64`, or `nil` if the text does not represent an exact unsigned 64-bit integer.
+    /// `UInt64` として取り出した値。テキストが正確な符号なし 64 ビット整数を表さない場合は `nil`。
     public var uint64: UInt64? { UInt64(text) }
 
-    /// The value as a `Decimal`, preserving more precision than `Double` for in-range values.
+    /// `Decimal` として取り出した値。範囲内の値では `Double` よりも精度を保持する。
     public var decimal: Decimal? { Decimal(string: text) }
 
-    /// The value as a `Double`. Lossy for magnitudes beyond IEEE-754 exact range.
+    /// `Double` として取り出した値。IEEE-754 の正確な範囲を超える大きさではロスが生じる。
     public var double: Double { Double(text) ?? .nan }
 
     public static func == (lhs: StructuredNumber, rhs: StructuredNumber) -> Bool {
@@ -54,11 +51,10 @@ extension StructuredNumber: CustomStringConvertible {
 }
 
 extension StructuredNumber {
-    /// Canonical numeric identity used for equality and hashing.
+    /// 等値判定とハッシュに使う正規化済み数値表現。
     ///
-    /// Two numbers are equal when they denote the same mathematical value, so
-    /// `1`, `1.0`, `1e0`, and `100e-2`(==1) all compare equal while arbitrary
-    /// precision is retained (comparison is purely textual, never via `Double`).
+    /// 同じ数学的値を示せば等しいとみなすため、`1`、`1.0`、`1e0`、`100e-2`（==1）は全て等しい。
+    /// 比較はテキストのみで行い、`Double` を経由しない。
     fileprivate struct Canonical: Hashable {
         var negative: Bool
         var digits: String

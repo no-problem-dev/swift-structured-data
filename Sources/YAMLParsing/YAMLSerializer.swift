@@ -1,22 +1,19 @@
 import Foundation
 import StructuredDataCore
 
-/// Serializes a ``StructuredValue`` into YAML 1.2 Core-schema text.
+/// ``StructuredValue`` を YAML 1.2 Core スキーマのテキストへシリアライズする。
 ///
-/// The inverse of ``YAMLParser`` over the same Core subset, guaranteeing
-/// `parse(serialize(v)) == v`. Emits block style for non-empty collections and
-/// flow (`[]` / `{}`) for empty ones. Scalars are emitted plain when they
-/// resolve back to the same value, and double-quoted otherwise — so a string
-/// like `"1.0"` survives as a string rather than coercing to a number.
+/// 同じ Core サブセット上での ``YAMLParser`` の逆変換。`parse(serialize(v)) == v` を保証する。
+/// 非空コレクションはブロックスタイル、空コレクションはフロー（`[]` / `{}`）で出力する。
+/// スカラーは同じ値に逆解決できる場合はプレインで、それ以外はダブルクォートで出力するため、
+/// `"1.0"` のような文字列は数値へ強制変換されず文字列として維持される。
 ///
-/// Tags, anchors/aliases, and complex keys are out of scope (the parser drops
-/// them), matching the round-trippable Core subset.
+/// タグ、アンカー/エイリアス、複合キーは対象外（パーサが除去する）。ラウンドトリップ可能な Core サブセットに対応。
 public struct YAMLSerializer: DataSerializer {
     public struct Options: Sendable {
-        /// Sort mapping keys lexicographically instead of preserving insertion order.
+        /// マッピングキーを挿入順ではなく辞書順でソートする。
         public var sortKeys: Bool
-        /// Per-level indentation. Must be at least one space for the parser to
-        /// distinguish nesting.
+        /// 1 レベルあたりのインデント文字列。パーサがネストを識別できるよう、最低 1 スペース必要。
         public var indent: String
 
         public init(sortKeys: Bool = false, indent: String = "  ") {
@@ -103,7 +100,7 @@ public struct YAMLSerializer: DataSerializer {
         Self.plainIsSafe(string) ? string : doubleQuoted(string)
     }
 
-    /// `true` if emitting `string` plain reparses to exactly `.string(string)`.
+    /// 文字列をプレインスカラーとして出力したとき、パーサが同一の文字列へ逆解決できる場合に `true`。
     static func plainIsSafe(_ string: String) -> Bool {
         guard !string.isEmpty else { return false }
         // Would a plain scalar coerce to null/bool/number under the Core schema?

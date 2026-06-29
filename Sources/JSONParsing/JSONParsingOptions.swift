@@ -1,9 +1,9 @@
 import StructuredDataCore
 
-/// Strictness knobs for the RFC 8259 parser.
+/// RFC 8259 パーサの厳格度設定。
 public struct JSONParsingOptions: Sendable {
     public var duplicateKeyPolicy: DuplicateKeyPolicy
-    /// Maximum nesting depth; bounds recursion to guard against stack-exhaustion DoS.
+    /// 最大ネスト深度。スタック枯渇 DoS を防ぐために再帰を制限する。
     public var maximumDepth: Int
 
     public init(duplicateKeyPolicy: DuplicateKeyPolicy = .lastWins, maximumDepth: Int = 128) {
@@ -11,6 +11,6 @@ public struct JSONParsingOptions: Sendable {
         self.maximumDepth = maximumDepth
     }
 
-    /// RFC 7493 (I-JSON) leaning: reject duplicate names.
+    /// RFC 7493（I-JSON）準拠：重複名を拒否するプリセット。
     public static let strict = JSONParsingOptions(duplicateKeyPolicy: .reject)
 }

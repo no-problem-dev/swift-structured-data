@@ -1,10 +1,9 @@
 import Foundation
-/// A `Decoder` whose source is a `StructuredValue`.
+/// `StructuredValue` をソースとする `Decoder`。
 ///
-/// This is the backbone that makes "dynamic value to static type" work for any
-/// `Decodable`: every format reuses this one implementation, so format targets
-/// only need to produce a `StructuredValue` and inherit full `Codable` support,
-/// nested containers, and `DecodingError` reporting for free.
+/// 全 `Decodable` に対して「動的な値→静的な型」変換を実現するバックボーン。
+/// 全フォーマットがこの 1 実装を再利用するため、フォーマットターゲットは `StructuredValue` を生成するだけで
+/// `Codable` 完全対応・ネストされたコンテナ・`DecodingError` 報告を無償で得られる。
 struct ValueDecoder: Decoder {
     let value: StructuredValue
     let options: DecodingOptions
@@ -57,7 +56,7 @@ extension StructuredValue {
         }
     }
 
-    /// Decodes a value held in this representation into a concrete primitive or `Decodable` type.
+    /// この表現に保持された値を具体的なプリミティブまたは `Decodable` 型へデコードする。
     func decodeScalar<T>(_ type: T.Type, options: DecodingOptions, codingPath: [CodingKey]) throws -> T where T: Decodable {
         if type == StructuredValue.self {
             return self as! T

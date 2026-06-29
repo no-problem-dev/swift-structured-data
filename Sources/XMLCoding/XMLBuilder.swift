@@ -1,4 +1,4 @@
-/// Declarative construction of XML trees, e.g. Anthropic-style tagged prompts.
+/// XML ツリーを宣言的に構築するリザルトビルダー（例: Anthropic スタイルのタグ付きプロンプト）。
 ///
 /// ```swift
 /// let prompt = XMLElement("instructions") {
@@ -32,7 +32,7 @@ extension XMLElement {
         self.init(name: name, attributes: attributes, children: text.isEmpty ? [] : [.text(text)])
     }
 
-    /// Serializes this element to a string using the given options.
+    /// 指定オプションでこの要素を文字列へシリアライズする。
     public func rendered(options: XMLSerializer.Options = .init()) -> String {
         XMLSerializer(options: options).string(from: self)
     }

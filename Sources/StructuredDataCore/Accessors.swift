@@ -1,10 +1,8 @@
-/// Exploratory, non-throwing access into an untyped document.
+/// 型付けされていないドキュメントへの、スロー不可の探索アクセス。
 ///
-/// This is sugar layered on top of the type-safe backbone: subscripts never
-/// throw and missing paths surface as `.null`, so chains like
-/// `value.user.name.string` are safe to write. For strict conversion use
-/// ``StructuredValue/decode(_:options:)``; dynamic member lookup is String-based
-/// and therefore does not catch typos at compile time.
+/// 型安全なバックボーン上に重ねたシュガー。サブスクリプトはスローせず、欠損パスは `.null` として浮上するため、
+/// `value.user.name.string` のようなチェーンを安全に書ける。厳格な変換には ``StructuredValue/decode(_:options:)`` を使う。
+/// 動的メンバールックアップは String ベースのためコンパイル時に誤字を検出できない。
 extension StructuredValue {
     public subscript(key: String) -> StructuredValue {
         objectValue?[key] ?? .null
@@ -19,7 +17,7 @@ extension StructuredValue {
         objectValue?[member] ?? .null
     }
 
-    /// Optionally decodes a child value, returning `nil` on absence or mismatch.
+    /// 子の値をオプショナルでデコードする。欠損または型不一致の場合は `nil` を返す。
     public subscript<T: Decodable>(key: String, as type: T.Type) -> T? {
         try? self[key].decode(type)
     }
@@ -36,36 +34,34 @@ extension StructuredValue {
     public var exists: Bool { !isNull }
 }
 
-/// Key-based typed accessors for object values, with numeric coercion so that a
-/// `65.0` delivered where an `Int` is expected still reads (matching how LLM
-/// tool arguments often arrive).
+/// オブジェクト値へのキーベースの型付きアクセサ（数値強制変換付き）。
 ///
-/// Each method looks up `key` in the receiver (which must be `.object`), then
-/// attempts the typed extraction. Returns `nil` when the key is absent, the
-/// value is `.null`, or the type does not match.
+/// `Int` が期待される箇所に `65.0` が届いた場合でも読み取れる（LLM ツール引数によく見られる形式に対応）。
+/// 各メソッドはレシーバ（`.object` でなければならない）の `key` を検索し、型付きの抽出を試みる。
+/// キーが存在しない、値が `.null`、または型が一致しない場合は `nil` を返す。
 extension StructuredValue {
-    /// The string value at `key`, or `nil` if absent or not a string.
+    /// `key` の文字列値。欠損または文字列でない場合は `nil`。
     public func string(_ key: String) -> String? { self[key].stringValue }
-    /// The boolean value at `key`, or `nil` if absent or not a bool.
+    /// `key` の真偽値。欠損または Bool でない場合は `nil`。
     public func bool(_ key: String) -> Bool? { self[key].boolValue }
-    /// The integer value at `key`, accepting fractional text like `65.0` by truncation.
+    /// `key` の整数値。`65.0` のような小数表記を切り捨てて受け付ける。
     public func int(_ key: String) -> Int? { self[key].numberValue?.coercedInt }
-    /// The double value at `key`, or `nil` if absent or not a number.
+    /// `key` の Double 値。欠損または数値でない場合は `nil`。
     public func double(_ key: String) -> Double? { self[key].numberValue?.double }
-    /// The array value at `key`, or `nil` if absent or not an array.
+    /// `key` の配列値。欠損または配列でない場合は `nil`。
     public func array(_ key: String) -> [StructuredValue]? { self[key].arrayValue }
-    /// The object value at `key`, or `nil` if absent or not an object.
+    /// `key` のオブジェクト値。欠損またはオブジェクトでない場合は `nil`。
     public func object(_ key: String) -> OrderedObject? { self[key].objectValue }
-    /// The string elements of the array at `key`, skipping non-string entries.
+    /// `key` の配列の文字列要素。文字列でないエントリを除外する。
     public func stringArray(_ key: String) -> [String]? { self[key].arrayValue?.compactMap(\.stringValue) }
-    /// `true` when `key` is present and its value is not `.null`.
+    /// `key` が存在し、値が `.null` でない場合に `true`。
     public func has(_ key: String) -> Bool { objectValue?[key] != nil }
-    /// The keys of this object, or an empty array if the value is not an object.
+    /// このオブジェクトのキー一覧。値がオブジェクトでない場合は空配列。
     public var keys: [String] { objectValue?.keys ?? [] }
 }
 
 extension StructuredNumber {
-    /// The value as `Int`, accepting fractional text like `65.0` by truncation.
+    /// `Int` として取り出した値。`65.0` のような小数表記を切り捨てて受け付ける。
     public var coercedInt: Int? {
         if let exact = int { return exact }
         let value = double

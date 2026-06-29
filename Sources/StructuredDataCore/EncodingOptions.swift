@@ -1,6 +1,6 @@
-/// Tunables applied while lowering an `Encodable` value into a `StructuredValue`.
+/// `Encodable` 値を `StructuredValue` へ変換する際のチューニングオプション。
 public struct EncodingOptions: Sendable {
-    /// Maps Swift property names onto payload object keys.
+    /// Swift プロパティ名をペイロードのオブジェクトキーへマップする戦略。
     public enum KeyStrategy: Sendable {
         case useDefaultKeys
         case convertToSnakeCase

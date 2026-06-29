@@ -1,22 +1,21 @@
 import Foundation
 
 extension StructuredValue {
-    /// Decodes this value into a concrete `Decodable` type via the shared backbone.
+    /// 共有バックボーンを経由してこの値を具体的な `Decodable` 型へデコードする。
     public func decode<T: Decodable>(_ type: T.Type, options: DecodingOptions = .init()) throws -> T {
         try decodeScalar(type, options: options, codingPath: [])
     }
 
-    /// Builds a value from any `Encodable`.
+    /// 任意の `Encodable` から値を構築する。
     public static func encoding<T: Encodable>(_ value: T, options: EncodingOptions = .init()) throws -> StructuredValue {
         try options.lower(value, codingPath: [])
     }
 }
 
-/// Adapts a ``DataParser`` into the consumer-facing ``StructuredDecoding`` contract.
+/// ``DataParser`` を消費者向け ``StructuredDecoding`` プロトコルへ適合させるアダプター。
 ///
-/// Format targets expose a thin decoder built on this, so the parse step
-/// (Layer 1) and the decode step (Layer 2) compose without re-implementing the
-/// `Decoder` machinery per format.
+/// フォーマットターゲットはこの上に薄いデコーダを公開する。解析ステップ（Layer 1）とデコードステップ（Layer 2）が、
+/// フォーマットごとに `Decoder` 機構を再実装することなく合成される。
 public struct StructuredDecoder<Parser: DataParser>: StructuredDecoding {
     public let parser: Parser
     public var options: DecodingOptions
@@ -35,7 +34,7 @@ public struct StructuredDecoder<Parser: DataParser>: StructuredDecoding {
     }
 }
 
-/// Adapts a ``DataSerializer`` into the consumer-facing ``StructuredEncoding`` contract.
+/// ``DataSerializer`` を消費者向け ``StructuredEncoding`` プロトコルへ適合させるアダプター。
 public struct StructuredEncoder<Serializer: DataSerializer>: StructuredEncoding {
     public let serializer: Serializer
     public var options: EncodingOptions

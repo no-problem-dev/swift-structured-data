@@ -21,11 +21,10 @@ final class ValueRef {
 final class ArrayRef { var elements: [ValueRef] = [] }
 final class ObjectRef { var entries: [(key: String, value: ValueRef)] = [] }
 
-/// An `Encoder` that lowers any `Encodable` into a `StructuredValue`.
+/// 任意の `Encodable` を `StructuredValue` へ変換する `Encoder`。
 ///
-/// The mirror image of ``ValueDecoder``: one implementation, reused by every
-/// format serializer. Encoding mutates a shared reference tree so nested and
-/// super encoders write into their own slot, then ``finalize()`` resolves it.
+/// ``ValueDecoder`` の鏡像。全フォーマットシリアライザが再利用する 1 実装。
+/// エンコードは共有参照ツリーを変更し、ネスト/スーパーエンコーダがそれぞれのスロットへ書き込む。``finalize()`` で解決する。
 final class ValueEncoder: Encoder {
     let options: EncodingOptions
     var codingPath: [CodingKey]
@@ -70,7 +69,7 @@ final class ValueEncoder: Encoder {
 }
 
 extension EncodingOptions {
-    /// Encodes a single `Encodable` into an immutable `StructuredValue`.
+    /// 単一の `Encodable` を不変の `StructuredValue` へエンコードする。
     func lower<T: Encodable>(_ value: T, codingPath: [CodingKey]) throws -> StructuredValue {
         if let value = value as? StructuredValue { return value }
         if let date = value as? Date, dateStrategy.interceptsDate { return dateStrategy.encode(date) }

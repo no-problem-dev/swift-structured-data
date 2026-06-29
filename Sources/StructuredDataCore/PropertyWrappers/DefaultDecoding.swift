@@ -1,13 +1,12 @@
-/// Supplies a fallback used when a key is absent or null.
+/// キーが欠損または null の場合のフォールバック値を提供するプロトコル。
 public protocol DefaultValueProvider {
     associatedtype Value: Codable & Sendable
     static var defaultValue: Value { get }
 }
 
-/// Opt-in default for a single property, applied when the key is missing or null.
+/// キーが欠損または null の場合に個別プロパティへ適用するデフォルト値のプロパティラッパー。
 ///
-/// Tolerance is declared per field rather than baked into the type's
-/// `init(from:)`, so the default remains strict everywhere else.
+/// 許容をフィールド単位で宣言し、型の `init(from:)` に組み込まない設計のため、他の箇所では厳格なデコードが維持される。
 @propertyWrapper
 public struct Default<Provider: DefaultValueProvider>: Codable, Sendable {
     public var wrappedValue: Provider.Value
@@ -31,7 +30,7 @@ extension Default: Equatable where Provider.Value: Equatable {}
 extension Default: Hashable where Provider.Value: Hashable {}
 
 public extension KeyedDecodingContainer {
-    /// Resolves a missing key to the provider's default instead of throwing.
+    /// 欠損キーをスローせずにプロバイダのデフォルト値で解決する。
     func decode<Provider>(_ type: Default<Provider>.Type, forKey key: Key) throws -> Default<Provider> {
         try decodeIfPresent(type, forKey: key) ?? Default(wrappedValue: Provider.defaultValue)
     }

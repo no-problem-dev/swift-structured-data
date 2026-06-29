@@ -1,10 +1,9 @@
 import StructuredDataCore
 
-/// Best-effort parser for an incomplete JSON prefix.
+/// 不完全な JSON プレフィックスへの最善努力パーサ。
 ///
-/// Unlike ``JSONScanner`` it never throws: when input ends mid-structure it
-/// returns the portion understood so far, dropping a trailing incomplete token.
-/// This backs streaming decode of partial LLM output.
+/// ``JSONScanner`` と異なりスローしない。入力が構造の途中で終了した場合は、末尾の不完全トークンを除いて理解できた部分を返す。
+/// LLM の部分出力のストリーミングデコードを支える実装。
 struct TolerantJSONScanner {
     private let bytes: [UInt8]
     private var index: Int

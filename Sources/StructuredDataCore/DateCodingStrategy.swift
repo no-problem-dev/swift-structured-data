@@ -1,34 +1,32 @@
 import Foundation
 
-/// Controls how `Date` is bridged to and from a ``StructuredValue``.
+/// `Date` と ``StructuredValue`` 間の相互変換方法を制御する。
 ///
-/// `Date`'s own `Codable` conformance encodes a `Double` (seconds since the
-/// reference date), which does not match the ISO 8601 strings most web/LLM APIs
-/// use. This strategy intercepts `Date` in the scalar path so callers can pick a
-/// wire format without writing `CodingKeys`. Default is ``deferredToDate`` so the
-/// behaviour is unchanged unless opted in.
+/// `Date` の標準 `Codable` 準拠は `Double`（参照日からの秒数）をエンコードするが、多くの Web/LLM API が使う ISO 8601 文字列とは一致しない。
+/// このストラテジーはスカラーパスで `Date` をインターセプトし、`CodingKeys` を書かずにワイヤーフォーマットを選択できるようにする。
+/// デフォルトは ``deferredToDate`` のため、オプトインしない限り挙動は変わらない。
 public enum DateCodingStrategy: Sendable {
-    /// Defer to `Date`'s standard `Codable` (a `Double`). No interception.
+    /// `Date` の標準 `Codable`（`Double`）に委譲する。インターセプトなし。
     case deferredToDate
-    /// RFC 3339 / ISO 8601 with internet date-time (`2024-01-02T03:04:05Z`).
+    /// RFC 3339 / ISO 8601 インターネット日時形式（例: `2024-01-02T03:04:05Z`）。
     case iso8601
-    /// ISO 8601 with fractional seconds (`2024-01-02T03:04:05.123Z`).
+    /// 小数秒付き ISO 8601（例: `2024-01-02T03:04:05.123Z`）。
     case iso8601WithFractional
-    /// A JSON number of seconds since 1970.
+    /// 1970 年起点の秒数を表す JSON 数値。
     case secondsSince1970
-    /// A JSON number of milliseconds since 1970.
+    /// 1970 年起点のミリ秒数を表す JSON 数値。
     case millisecondsSince1970
-    /// Lenient default for LLM/web APIs: encodes with fractional ISO 8601;
-    /// decodes ISO 8601 (with or without fractional seconds) then falls back to
-    /// `yyyy-MM-dd`. Mirrors the historical `swift-api-client` behaviour.
+    /// LLM/Web API 向け寛容なデフォルト。小数秒付き ISO 8601 でエンコードし、
+    /// デコード時は小数秒あり/なし ISO 8601、次いで `yyyy-MM-dd` にフォールバックする。
+    /// 旧 `swift-api-client` の挙動を踏襲。
     case llmAPIDefault
-    /// Fully custom bridging.
+    /// 完全にカスタムなブリッジング。
     case custom(
         encode: @Sendable (Date) -> StructuredValue,
         decode: @Sendable (StructuredValue) throws -> Date
     )
 
-    /// Whether this strategy replaces `Date`'s standard `Codable` handling.
+    /// このストラテジーが `Date` の標準 `Codable` 処理を置き換えるかどうか。
     public var interceptsDate: Bool {
         if case .deferredToDate = self { return false }
         return true

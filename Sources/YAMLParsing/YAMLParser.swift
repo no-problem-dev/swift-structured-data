@@ -1,12 +1,12 @@
 import Foundation
 import StructuredDataCore
 
-/// YAML 1.2 Core-schema parser producing the neutral ``StructuredValue``.
+/// YAML 1.2 Core スキーマに準拠し、中立の ``StructuredValue`` を生成するパーサ。
 ///
-/// Covers the JSON-superset subset most external systems use: block and flow
-/// mappings/sequences, plain/single/double-quoted scalars, literal/folded block
-/// scalars, comments, and multi-document streams. Tags, anchors/aliases, and
-/// complex keys are not yet resolved.
+/// 多くの外部システムが使う JSON 上位互換サブセットをカバーする。
+/// ブロック/フローのマッピング・シーケンス、プレイン/シングルクォート/ダブルクォートスカラー、
+/// リテラル/フォールドブロックスカラー、コメント、マルチドキュメントストリームに対応。
+/// タグ、アンカー/エイリアス、複合キーは未解決。
 public struct YAMLParser: DataParser {
     public init() {}
 
@@ -19,6 +19,7 @@ public struct YAMLParser: DataParser {
         try parse(Data(string.utf8))
     }
 
+    /// `---` 区切りで複数の YAML ドキュメントを解析し、全ドキュメントを配列で返す。
     public func parseAll(_ data: Data) throws -> [StructuredValue] {
         guard let text = String(data: data, encoding: .utf8) else { throw ParseError(.invalidUTF8) }
         var documents: [StructuredValue] = []

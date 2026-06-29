@@ -1,11 +1,10 @@
 import Foundation
 import StructuredDataCore
 
-/// YAML entry point for the consumer-facing decode contract.
+/// 消費者向けデコードプロトコルへの YAML エントリポイント。
 ///
-/// Composes ``YAMLParser`` (Layer 1) with the shared decoding backbone, so YAML
-/// payloads decode into `Codable` types through the same path as JSON. Inject as
-/// `any StructuredDecoding` to keep call sites format-agnostic.
+/// ``YAMLParser``（Layer 1）と共有デコードバックボーンを合成する。YAML ペイロードが JSON と同じパスで `Codable` 型へデコードされる。
+/// コールサイトをフォーマット非依存に保つために `any StructuredDecoding` として注入する。
 public struct YAMLDecoder: StructuredDecoding {
     public var decodingOptions: DecodingOptions
 

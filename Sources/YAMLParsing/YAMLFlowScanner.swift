@@ -1,7 +1,6 @@
 import StructuredDataCore
 
-/// Parses YAML flow style — `[...]`, `{...}`, and quoted scalars — and resolves
-/// plain flow scalars with the Core schema.
+/// YAML フロースタイル（`[...]`、`{...}`、クォートスカラー）を解析し、プレインフロースカラーを Core スキーマで解決する。
 struct YAMLFlowScanner {
     private let chars: [Character]
     private var index: Int

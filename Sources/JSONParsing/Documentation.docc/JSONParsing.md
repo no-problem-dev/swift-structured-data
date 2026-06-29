@@ -1,10 +1,10 @@
 # ``JSONParsing``
 
-JSON parsing and encoding built on the `StructuredDataCore` neutral representation.
+`StructuredDataCore` の中立表現上に構築した JSON 解析・エンコードモジュール。
 
 ## Overview
 
-`JSONParsing` provides the full JSON codec stack for this package. At the top sits ``JSONDecoder``, a thin composition of the lower-level parser and the shared `StructuredDataCore` decoding backbone. Because ``JSONDecoder`` conforms to the `StructuredDecoding` protocol defined in `StructuredDataCore`, you can inject it anywhere a format-agnostic decoder is expected — and later replace it with a `YAMLDecoder` without touching the rest of your code.
+`JSONParsing` はこのパッケージの完全な JSON コーデックスタックを提供する。最上位に位置する ``JSONDecoder`` は、低レベルパーサと `StructuredDataCore` の共有デコードバックボーンの薄い合成体。``JSONDecoder`` は `StructuredDataCore` が定義する `StructuredDecoding` プロトコルに準拠しているため、フォーマット非依存なデコーダが期待される箇所に注入でき、後から `YAMLDecoder` へ差し替えてもコードの残りは変更不要。
 
 ```swift
 import JSONParsing
@@ -21,28 +21,28 @@ let decoder = JSONDecoder(
 let config = try decoder.decode(Config.self, from: jsonData)
 ```
 
-For cases where you need the intermediate `StructuredValue` directly — for example, to inspect a loosely typed payload before deciding which model to decode into — use ``JSONParser`` instead:
+どのモデルにデコードするか決める前に緩く型付けされたペイロードを検査したい場合など、中間表現 `StructuredValue` を直接必要とする場合は ``JSONParser`` を使う。
 
 ```swift
 import JSONParsing
 
 let value = try JSONParser().parse(jsonData)
-let kind = value.type.string          // dynamic member access, never throws
-let count = value.int("itemCount")    // typed key accessor
+let kind = value.type.string          // 動的メンバーアクセス、スローしない
+let count = value.int("itemCount")    // 型付きキーアクセサ
 ```
 
-``StreamingJSONParser`` handles LLM token streams. It accumulates chunks and exposes the best-effort value parsed so far via `snapshot()`, which never throws. Call `finish()` for a strict parse once the stream is complete.
+``StreamingJSONParser`` は LLM トークンストリームを処理する。チャンクを蓄積し、`snapshot()` でその時点での最善解をスローせずに公開する。ストリームが完了したら `finish()` で厳格な解析を行う。
 
 ```swift
 var streaming = StreamingJSONParser()
 for chunk in tokenStream {
     streaming.consume(chunk)
-    let partial = streaming.snapshot()   // render partial UI here
+    let partial = streaming.snapshot()   // ここで部分的な UI を描画する
 }
 let final = try streaming.finish()
 ```
 
-Encoding is the mirror of decoding: ``JSONEncoder`` conforms to the `StructuredEncoding` protocol and uses ``JSONSerializer`` internally.
+エンコードはデコードの鏡像。``JSONEncoder`` は `StructuredEncoding` プロトコルに準拠し、内部で ``JSONSerializer`` を使う。
 
 ```swift
 let encoder = JSONEncoder()
@@ -52,17 +52,17 @@ let string = try encoder.string(from: config)
 
 ## Topics
 
-### Decoding and Encoding
+### デコードとエンコード
 
 - ``JSONDecoder``
 - ``JSONEncoder``
 
-### Parsing and Serialization
+### 解析とシリアライズ
 
 - ``JSONParser``
 - ``JSONSerializer``
 - ``JSONParsingOptions``
 
-### Streaming
+### ストリーミング
 
 - ``StreamingJSONParser``

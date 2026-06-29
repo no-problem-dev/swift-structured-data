@@ -1,23 +1,21 @@
-/// Policy for handling repeated names within a single object.
+/// 単一オブジェクト内の重複キー名の処理ポリシー。
 ///
-/// RFC 8259 leaves duplicate-name behaviour implementation-defined; this makes
-/// the choice explicit at parse time.
+/// RFC 8259 は重複名の挙動を実装定義としている。このポリシーによって解析時に明示的に選択する。
 public enum DuplicateKeyPolicy: Sendable {
-    /// Keep the last occurrence (JavaScript-compatible, the common default).
+    /// 最後の出現を採用（JavaScript 互換のデフォルト）。
     case lastWins
-    /// Keep the first occurrence.
+    /// 最初の出現を採用。
     case firstWins
-    /// Reject the document (I-JSON / RFC 7493 strictness).
+    /// ドキュメントを拒否（I-JSON / RFC 7493 の厳格モード）。
     case reject
-    /// Preserve every occurrence in source order.
+    /// 出現順序を保持したまま全て保存する。
     case preserveAll
 }
 
-/// An insertion-order-preserving string-keyed collection.
+/// 挿入順序を保持する文字列キーコレクション。
 ///
-/// JSON/YAML objects are unordered by spec, but preserving source order keeps
-/// re-serialization and diffs stable. Lookup returns the first match, matching
-/// how decoders resolve keys.
+/// JSON/YAML のオブジェクトは仕様上は順序なしだが、ソース順を保持することで再シリアライズと diff が安定する。
+/// ルックアップは最初のマッチを返し、デコーダのキー解決と一致する。
 public struct OrderedObject: Sendable, Hashable {
     public private(set) var entries: [(key: String, value: StructuredValue)]
 
@@ -27,8 +25,7 @@ public struct OrderedObject: Sendable, Hashable {
         self.entries = entries
     }
 
-    /// Builds from a Swift dictionary. Insertion order is unspecified (JSON
-    /// objects are unordered), so use the entries initializer when order matters.
+    /// Swift 辞書から構築する。挿入順は不定（JSON オブジェクトは順序なし）のため、順序が重要な場合は entries イニシャライザを使う。
     public init(_ dictionary: [String: StructuredValue]) {
         self.entries = dictionary.map { ($0.key, $0.value) }
     }
@@ -56,21 +53,21 @@ public struct OrderedObject: Sendable, Hashable {
         entries.append((key, value))
     }
 
-    /// Removes the entry for the given key and returns its value, or `nil` if the key is absent.
+    /// 指定キーのエントリを削除し、その値を返す。キーが存在しない場合は `nil` を返す。
     @discardableResult
     public mutating func removeValue(forKey key: String) -> StructuredValue? {
         guard let index = entries.firstIndex(where: { $0.key == key }) else { return nil }
         return entries.remove(at: index).value
     }
 
-    /// A standard Swift dictionary view (insertion order is lost). Use `entries` when order matters.
+    /// 標準 Swift 辞書ビュー（挿入順は失われる）。順序が重要な場合は `entries` を使う。
     public var dictionary: [String: StructuredValue] {
         Dictionary(entries.map { ($0.key, $0.value) }, uniquingKeysWith: { _, last in last })
     }
 
-    /// Builds an object from raw entries, applying the duplicate-name policy.
+    /// 生エントリから重複キーポリシーを適用してオブジェクトを構築する。
     ///
-    /// Returns `nil` only when `policy` is `.reject` and a duplicate is present.
+    /// `nil` を返すのは `policy` が `.reject` かつ重複が存在する場合のみ。
     public static func make(
         from raw: [(key: String, value: StructuredValue)],
         policy: DuplicateKeyPolicy
@@ -95,9 +92,8 @@ public struct OrderedObject: Sendable, Hashable {
         }
     }
 
-    /// Order-insensitive: JSON/YAML objects are semantically unordered, so two
-    /// objects with the same name/value pairs are equal regardless of order.
-    /// Insertion order is still preserved for serialization.
+    /// 順序非依存。JSON/YAML オブジェクトは意味的に順序なしのため、同じ名前/値ペアを持つ 2 つのオブジェクトは順序によらず等しい。
+    /// 挿入順はシリアライズのために保持される。
     public static func == (lhs: OrderedObject, rhs: OrderedObject) -> Bool {
         guard lhs.entries.count == rhs.entries.count else { return false }
         var rhsMap: [String: StructuredValue] = [:]

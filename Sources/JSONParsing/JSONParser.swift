@@ -1,7 +1,7 @@
 import Foundation
 import StructuredDataCore
 
-/// RFC 8259 / ECMA-404 parser producing the neutral ``StructuredValue``.
+/// RFC 8259 / ECMA-404 に準拠し、中立の ``StructuredValue`` を生成するパーサ。
 public struct JSONParser: DataParser {
     public var options: JSONParsingOptions
 

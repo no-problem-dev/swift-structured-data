@@ -1,8 +1,7 @@
-/// Decodes a value that an API may deliver under a different primitive type,
-/// e.g. a number arriving as the string `"42"` or a bool as `"true"`.
+/// API が異なるプリミティブ型で返す可能性のある値をデコードするプロパティラッパー。
 ///
-/// On a type mismatch it retries through a string round-trip before giving up,
-/// so flaky upstream typing does not break decoding.
+/// 例: 文字列 `"42"` として届く数値や `"true"` として届く Bool。
+/// 型が一致しない場合は文字列経由のラウンドトリップで再試行するため、上流の型付けの揺れでデコードが壊れない。
 @propertyWrapper
 public struct LosslessValue<Value: LosslessStringConvertible & Codable & Sendable>: Codable, Sendable {
     public var wrappedValue: Value

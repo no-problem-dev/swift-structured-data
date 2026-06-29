@@ -1,18 +1,18 @@
-# Getting Started with StructuredDataCore
+# StructuredDataCore 入門
 
-Add swift-structured-data to your package and start decoding JSON, YAML, or XML with a single unified API.
+swift-structured-data をパッケージに追加し、統一 API で JSON・YAML・XML のデコードを始める。
 
-## Installation
+## インストール
 
-Add the package to your `Package.swift` dependencies:
+`Package.swift` の dependencies に追加する。
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/no-problem-dev/swift-structured-data.git", from: "1.0.0"),
+    .package(url: "https://github.com/no-problem-dev/swift-structured-data.git", from: "1.4.0"),
 ],
 ```
 
-Then add the targets you need:
+次に必要なターゲットを追加する。
 
 ```swift
 targets: [
@@ -28,34 +28,34 @@ targets: [
 ]
 ```
 
-Import only the targets you use — each format library is independent, and `StructuredDataCore` is re-exported automatically.
+必要なターゲットだけを import する。各フォーマットライブラリは独立しており、`StructuredDataCore` は自動的に再エクスポートされる。
 
-## Basic Usage
+## 基本的な使い方
 
-### StructuredValue — the neutral representation
+### StructuredValue — 中立の表現
 
-Every format parser produces a ``StructuredValue``, an enum with six cases: `.null`, `.bool`, `.number`, `.string`, `.array`, `.object`.
+全フォーマットパーサは ``StructuredValue`` を生成する。`.null`、`.bool`、`.number`、`.string`、`.array`、`.object` の 6 ケースを持つ enum。
 
 ```swift
 import StructuredDataCore
 
-// Build a value with literals
+// リテラルで値を構築する
 let value: StructuredValue = [
     "name": "Alice",
     "age": 30,
     "active": true,
 ]
 
-// Dynamic member access — never throws, missing paths return .null
+// 動的メンバーアクセス — スローしない。欠損パスは .null を返す
 let name = value.name.string          // "Alice"
-let city = value.address.city.string  // nil  (missing path → .null → nil)
+let city = value.address.city.string  // nil（欠損パス → .null → nil）
 
-// Key-based typed accessors
+// キーベースの型付きアクセサ
 let age  = value.int("age")           // 30
 let flag = value.bool("active")       // true
 ```
 
-### JSONDecoder — JSON to Codable
+### JSONDecoder — JSON を Codable へ
 
 ```swift
 import JSONParsing
@@ -71,7 +71,7 @@ let decoder = JSONDecoder(
 let article = try decoder.decode(Article.self, from: jsonData)
 ```
 
-Use ``JSONDecoder`` as `any StructuredDecoding` to keep your code format-agnostic:
+`any StructuredDecoding` として使うことでコードをフォーマット非依存に保てる。
 
 ```swift
 func parse<T: Decodable>(_ type: T.Type, from data: Data, decoder: any StructuredDecoding) throws -> T {
@@ -79,9 +79,9 @@ func parse<T: Decodable>(_ type: T.Type, from data: Data, decoder: any Structure
 }
 ```
 
-### YAMLDecoder — YAML to Codable
+### YAMLDecoder — YAML を Codable へ
 
-`YAMLDecoder` exposes the same ``StructuredDecoding`` protocol as `JSONDecoder`. Drop it in wherever a JSON decoder works:
+`YAMLDecoder` は `JSONDecoder` と同じ ``StructuredDecoding`` プロトコルを公開する。JSON デコーダが動く箇所にそのまま差し込める。
 
 ```swift
 import YAMLParsing
@@ -92,25 +92,25 @@ let decoder = YAMLDecoder(
 let config = try decoder.decode(AppConfig.self, from: yamlData)
 ```
 
-`YAMLParser` also supports multi-document streams:
+`YAMLParser` はマルチドキュメントストリームもサポートする。
 
 ```swift
 let documents: [StructuredValue] = try YAMLParser().parseAll(yamlData)
 ```
 
-### XMLDocumentParser + XMLBuilder — XML trees
+### XMLDocumentParser + XMLBuilder — XML ツリー
 
-XML has its own richer model (`XMLElement` / `XMLNode`) that preserves attributes, mixed content, and CDATA.
+XML は独自のリッチなモデル（`XMLElement` / `XMLNode`）を持ち、属性・混在コンテンツ・CDATA を保持する。
 
 ```swift
 import XMLCoding
 
-// Parse an XML document
+// XML ドキュメントを解析する
 let root: XMLElement = try XMLDocumentParser().parse(xmlData)
-let version = root.attribute("version")         // attribute lookup
-let items = root.firstElement(named: "items")   // first matching child
+let version = root.attribute("version")         // 属性の取り出し
+let items = root.firstElement(named: "items")   // 最初にマッチした子要素
 
-// Build XML with a result builder (e.g. Anthropic prompt tags)
+// リザルトビルダーで XML を構築する（例: Anthropic プロンプトタグ）
 let prompt = XMLElement("prompt") {
     XMLElement("system", text: "You are a data analyst.")
     XMLElement("user") {
@@ -120,15 +120,15 @@ let prompt = XMLElement("prompt") {
 let xmlString = prompt.rendered()
 ```
 
-To project an XML tree into ``StructuredValue`` for Codable decoding, use `XMLElement.structuredValue` if provided by your application layer, or traverse the tree directly.
+XML ツリーを ``StructuredValue`` へ射影して Codable デコードしたい場合は、アプリケーション層で `XMLElement.structuredValue` を実装するか、ツリーを直接走査する。
 
-### Choosing the right parser
+### パーサの選び方
 
-| Situation | Use |
+| 状況 | 使うもの |
 |---|---|
-| Typical REST/LLM JSON payload | `JSONDecoder` |
-| LLM token stream (partial JSON) | `StreamingJSONParser` |
-| Configuration files | `YAMLDecoder` |
-| Anthropic XML prompt tags | `XMLDocumentParser` + `XMLBuilder` |
-| Raw intermediate value | `JSONParser` / `YAMLParser` directly |
-| Format-agnostic decode | `any StructuredDecoding` |
+| 通常の REST/LLM JSON ペイロード | `JSONDecoder` |
+| LLM トークンストリーム（部分 JSON） | `StreamingJSONParser` |
+| 設定ファイル | `YAMLDecoder` |
+| Anthropic XML プロンプトタグ | `XMLDocumentParser` + `XMLBuilder` |
+| 生の中間値 | `JSONParser` / `YAMLParser` 直接 |
+| フォーマット非依存デコード | `any StructuredDecoding` |

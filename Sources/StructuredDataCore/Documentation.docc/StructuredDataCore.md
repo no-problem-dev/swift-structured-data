@@ -1,54 +1,54 @@
 # ``StructuredDataCore``
 
-Format-neutral structured data representation and Codable bridge shared by JSON, YAML, and XML targets.
+フォーマット非依存の構造化データ中間表現と、JSON・YAML・XML ターゲットが共有する Codable ブリッジ。
 
 ## Overview
 
-`StructuredDataCore` defines the intermediate representation that all format parsers converge on: ``StructuredValue``. Every format module in this package — `JSONParsing`, `YAMLParsing`, and `XMLCoding` — produces or consumes a `StructuredValue`, and the single decoding backbone in `StructuredDataCore` turns it into any `Decodable` type. Swapping JSON for YAML at the call site requires changing only one import.
+`StructuredDataCore` は全フォーマットパーサが収束する中間表現 ``StructuredValue`` を定義する。このパッケージの全モジュール（`JSONParsing`、`YAMLParsing`、`XMLCoding`）は `StructuredValue` を生成または消費し、`StructuredDataCore` が持つ単一のデコードバックボーンが任意の `Decodable` 型へ変換する。コールサイトで JSON を YAML へ差し替えるには import を 1 行変えるだけでよい。
 
 ```swift
 import StructuredDataCore
 import JSONParsing
 
-// Parse JSON into the neutral representation
+// JSON を中立表現へ解析する
 let value = try JSONParser().parse(jsonData)
 
-// Extract values directly
-let name: String? = value.user.name.string          // dynamic member access
-let age: Int? = value.int("age")                    // key-based typed accessor
+// 値を直接取り出す
+let name: String? = value.user.name.string          // 動的メンバーアクセス
+let age: Int? = value.int("age")                    // キーベースの型付きアクセサ
 
-// Decode into a Codable type via the shared bridge
+// 共有ブリッジ経由で Codable 型へデコードする
 struct User: Decodable { var name: String; var age: Int }
 let user = try value.decode(User.self)
 ```
 
-The architecture is split into two layers:
+アーキテクチャは 2 層に分かれている。
 
-- **Layer 1 — Parsing**: each format target implements ``DataParser`` and produces a `StructuredValue` without performing any `Codable` type coercion.
-- **Layer 2 — Decoding**: ``StructuredDecoder`` composes a `DataParser` with the shared decoding backbone, exposing the ``StructuredDecoding`` protocol so call sites stay format-agnostic.
+- **Layer 1 — 解析**: 各フォーマットターゲットが ``DataParser`` を実装し、`Codable` 型変換を一切行わずに `StructuredValue` を生成する。
+- **Layer 2 — デコード**: ``StructuredDecoder`` が `DataParser` と共有デコードバックボーンを合成し、``StructuredDecoding`` プロトコルとしてコールサイトへフォーマット非依存の窓口を提供する。
 
 ```swift
-// Format-agnostic decode — swap JSONDecoder for YAMLDecoder with no other changes
+// フォーマット非依存のデコード — JSONDecoder を YAMLDecoder に差し替えても他は変わらない
 func load<T: Decodable>(_ type: T.Type, from data: Data, using decoder: any StructuredDecoding) throws -> T {
     try decoder.decode(type, from: data)
 }
 ```
 
-The four modules divide responsibilities as follows. `StructuredDataCore` owns the neutral intermediate representation and the `Codable` bridge — it is the only dependency the other three modules share. `JSONParsing` provides `JSONDecoder` and `JSONEncoder` for ordinary REST/LLM payloads, `JSONParser` for direct `StructuredValue` access, and `StreamingJSONParser` for token-by-token LLM output. `YAMLParsing` covers YAML 1.2 Core-schema documents via `YAMLDecoder` and `YAMLParser`, plus a matching `YAMLSerializer` for round-tripping. `XMLCoding` takes a different approach: it preserves the full XML tree — elements, attributes, mixed content, CDATA — through `XMLDocumentParser`, `XMLElement`, and `XMLBuilder`, rather than flattening XML into `StructuredValue`.
+4 モジュールの責務は以下のとおり。`StructuredDataCore` は中立の中間表現と `Codable` ブリッジを持ち、他の 3 モジュールが唯一共有する依存先。`JSONParsing` は通常の REST/LLM ペイロード向け `JSONDecoder`・`JSONEncoder`、直接 `StructuredValue` を扱う `JSONParser`、トークン単位の LLM 出力向け `StreamingJSONParser` を提供する。`YAMLParsing` は `YAMLDecoder` と `YAMLParser` で YAML 1.2 Core スキーマドキュメントを扱い、ラウンドトリップ用の `YAMLSerializer` も持つ。`XMLCoding` は異なるアプローチをとり、XML を `StructuredValue` へ平坦化するのではなく、`XMLDocumentParser`・`XMLElement`・`XMLBuilder` を通じて要素・属性・混在コンテンツ・CDATA を含む完全な XML ツリーを保持する。
 
 ## Topics
 
-### Essentials
+### 導入
 
 - <doc:GettingStarted>
 
-### Intermediate Representation
+### 中間表現
 
 - ``StructuredValue``
 - ``StructuredNumber``
 - ``OrderedObject``
 
-### Parsing and Serialization Contracts
+### 解析・シリアライズのプロトコル
 
 - ``DataParser``
 - ``DataSerializer``
@@ -57,19 +57,19 @@ The four modules divide responsibilities as follows. `StructuredDataCore` owns t
 - ``StructuredDecoder``
 - ``StructuredEncoder``
 
-### Options and Configuration
+### オプションと設定
 
 - ``DecodingOptions``
 - ``EncodingOptions``
 - ``DateCodingStrategy``
 - ``DuplicateKeyPolicy``
 
-### Error Handling
+### エラー処理
 
 - ``ParseError``
 - ``SourceLocation``
 
-### Property Wrappers
+### プロパティラッパー
 
 - ``Default``
 - ``DefaultValueProvider``

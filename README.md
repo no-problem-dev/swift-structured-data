@@ -1,23 +1,25 @@
+English | [日本語](./README.ja.md)
+
 # swift-structured-data
 
-外部システム由来の動的な構造化データ（JSON ほか）を、Swift の型システムへ安全に変換するレイヤー。
-「正しく読む」層と「型へ変換する」層を分離し、数値の精度や順序を失わずに `Codable` へ橋渡しする。
+A safe bridge that converts dynamic structured data from external systems (JSON and more) into Swift's type system.
+Separates the "parse correctly" layer from the "convert to types" layer, bridging to `Codable` without losing numeric precision or ordering.
 
-設計の全体像は [DESIGN.md](./DESIGN.md) を参照。
+For the full design rationale, see [DESIGN.md](./DESIGN.md).
 
-## 特徴
+## Features
 
-- **任意精度を壊さない数値モデル** — JSON number を生の十進文字列で保持し、要求された型へ遅延変換
-- **規定プロトコル中心の依存設計** — 消費者は `any StructuredDecoding` を注入で受け、具象パーサに依存しない
-- **フォーマット非依存の単一バックボーン** — カスタム `Decoder`/`Encoder` を 1 度実装し全フォーマットで再利用
-- **探索アクセサ** — `value.user.name.string` の動的アクセスと、型安全な `decode(_:)` の二層
-- **寛容デコードをフィールド単位でオプトイン** — `@Default` / `@LossyArray` / `@LosslessValue`
-- **ストリーミング部分デコード** — LLM のトークン逐次出力から途中状態を抽出
-- **公式適合性スイートで検証** — nst/JSONTestSuite を同梱して `y_`/`n_`/`i_` を網羅
+- **Precision-preserving number model** — JSON numbers are kept as raw decimal text and converted lazily to the requested type
+- **Protocol-centric dependency design** — consumers inject `any StructuredDecoding` and never depend on a concrete parser
+- **Single backbone for all formats** — one custom `Decoder`/`Encoder` implementation, reused across every format
+- **Two-tier access** — dynamic `value.user.name.string` exploration alongside type-safe `decode(_:)`
+- **Opt-in tolerant decoding per field** — `@Default` / `@LossyArray` / `@LosslessValue`
+- **Streaming partial decode** — extract in-progress state from an LLM token-by-token output
+- **Verified against the official conformance suite** — `nst/JSONTestSuite` bundled, covering `y_` / `n_` / `i_` cases
 
-## 使い方
+## Usage
 
-### デコード / エンコード
+### Decode / Encode
 
 ```swift
 import JSONParsing
@@ -25,13 +27,13 @@ import JSONParsing
 struct Config: Codable { var retries: Int; var hosts: [String] }
 
 let config = try JSONDecoder().decode(Config.self, from: data)
-let data = try JSONEncoder().encode(config)
+let encoded = try JSONEncoder().encode(config)
 ```
 
-### 規定プロトコルへの注入（依存性逆転）
+### Inject a protocol (dependency inversion)
 
 ```swift
-import StructuredDataCore   // ライブラリは Core にのみ依存
+import StructuredDataCore   // library depends only on Core
 
 struct APIClient {
     let decoder: any StructuredDecoding
@@ -40,11 +42,11 @@ struct APIClient {
     }
 }
 
-// 合成ルート（アプリ）だけが具象を選ぶ
+// Only the composition root (app) picks the concrete type
 let client = APIClient(decoder: JSONDecoder())
 ```
 
-### 動的な探索
+### Dynamic exploration
 
 ```swift
 let value = try JSONParser().parse(data)
@@ -53,18 +55,18 @@ value.items[0].id.int           // Int?
 value["count", as: Int.self]    // Int?
 ```
 
-### 寛容デコード
+### Tolerant decoding
 
 ```swift
 struct Settings: Codable {
     @DefaultFalse var verbose: Bool
     @DefaultEmptyArray<String> var tags: [String]
-    @LossyArray var ids: [Int]          // 壊れた要素を捨てる
-    @LosslessValue var port: Int        // "8080" でも 8080 でも受ける
+    @LossyArray var ids: [Int]          // discard malformed elements
+    @LosslessValue var port: Int        // accepts "8080" or 8080
 }
 ```
 
-### ストリーミング
+### Streaming
 
 ```swift
 var parser = StreamingJSONParser()
@@ -74,17 +76,36 @@ parser.consume(#"a"}"#)
 parser.snapshot().name.string    // "Ada"
 ```
 
-## モジュール
+## Installation
 
-| モジュール | 役割 |
+Add the package to your `Package.swift`:
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/no-problem-dev/swift-structured-data.git", from: "1.4.0"),
+],
+```
+
+Then add the products you need:
+
+```swift
+.product(name: "StructuredDataCore", package: "swift-structured-data"),
+.product(name: "JSONParsing",         package: "swift-structured-data"),
+.product(name: "YAMLParsing",         package: "swift-structured-data"),
+.product(name: "XMLCoding",           package: "swift-structured-data"),
+```
+
+## Modules
+
+| Module | Role |
 |---|---|
-| `StructuredDataCore` | 規定プロトコル・中立 DOM・`Decoder`/`Encoder` バックボーン・property wrapper |
-| `JSONParsing` | RFC 8259 パーサ／シリアライザ・ストリーミング |
-| `YAMLParsing` | YAML 1.2 Core サブセットのパーサ（block/flow・block scalar・multi-doc・Norway 修正） |
+| `StructuredDataCore` | Protocols, neutral DOM, `Decoder`/`Encoder` backbone, property wrappers |
+| `JSONParsing` | RFC 8259 parser/serializer, streaming |
+| `YAMLParsing` | YAML 1.2 Core subset (block/flow, block scalars, multi-doc, Norway fix) |
+| `XMLCoding` | XML tree parsing, declarative builder, correct escaping |
 
-YAML はフルスペック（anchor/alias・tag・複合キー）未対応。実装状況とテスト計測は
-[DESIGN.md](./DESIGN.md) を参照。
+YAML does not support the full spec (anchors/aliases, tags, complex keys). For implementation status and test coverage see [DESIGN.md](./DESIGN.md).
 
-## ライセンス
+## License
 
 MIT

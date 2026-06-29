@@ -1,7 +1,5 @@
-/// `Codable` conformance lets a `StructuredValue` be embedded in other Codable
-/// types and round-tripped through any encoder/decoder, including Foundation's.
-/// The library's own parsers preserve number precision; this path follows
-/// whatever the host coder supports.
+/// `Codable` 準拠により、`StructuredValue` を他の Codable 型に埋め込み Foundation を含む任意のエンコーダ/デコーダでラウンドトリップできる。
+/// ライブラリ独自パーサは数値精度を保持するが、このパスはホストのコーダーが対応する範囲に従う。
 extension StructuredValue: Codable {
     public init(from decoder: Decoder) throws {
         if var unkeyed = try? decoder.unkeyedContainer() {

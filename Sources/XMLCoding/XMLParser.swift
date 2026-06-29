@@ -1,19 +1,29 @@
 import Foundation
 import StructuredDataCore
 
-/// Parses a well-formed XML document into an ``XMLElement`` tree.
+/// 整形式 XML ドキュメントを ``XMLElement`` ツリーへ解析する。
 ///
-/// Covers elements, attributes, text, CDATA, comments, processing
-/// instructions, and predefined/numeric entity references. DTD validation and
-/// namespace resolution are out of scope (prefixes are kept verbatim).
+/// 要素、属性、テキスト、CDATA、コメント、処理命令、定義済み/数値エンティティ参照をカバーする。
+/// DTD バリデーションと名前空間解決は対象外（プレフィックスはそのまま保持）。
 public struct XMLDocumentParser: Sendable {
+    /// パーサを初期化する。
     public init() {}
 
+    /// UTF-8 でエンコードされたバイト列を解析し、``XMLElement`` ツリーを返す。
+    ///
+    /// - Parameter data: UTF-8 エンコードの XML バイト列。
+    /// - Returns: ドキュメントのルート要素。
+    /// - Throws: バイト列が UTF-8 として無効な場合、または XML が整形式でない場合に ``ParseError`` を投げる。
     public func parse(_ data: Data) throws -> XMLElement {
         guard let text = String(data: data, encoding: .utf8) else { throw ParseError(.invalidUTF8) }
         return try parse(text)
     }
 
+    /// XML 文字列を解析し、``XMLElement`` ツリーを返す。
+    ///
+    /// - Parameter string: 解析する XML 文字列。
+    /// - Returns: ドキュメントのルート要素。
+    /// - Throws: XML が整形式でない場合、または不明なエンティティ参照が含まれる場合に ``ParseError`` を投げる。
     public func parse(_ string: String) throws -> XMLElement {
         var scanner = Scanner(chars: Array(string))
         return try scanner.parseDocument()

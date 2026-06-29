@@ -1,14 +1,24 @@
 import Foundation
 
-/// Serializes an ``XMLElement`` tree to text, escaping content correctly.
+/// ``XMLElement`` ツリーをテキストへシリアライズし、コンテンツを正しくエスケープする。
 ///
-/// Text escapes `&`, `<`, `>`; attribute values additionally escape `"`. This is
-/// the escaping the hand-rolled prompt builders were missing.
+/// テキストは `&`・`<`・`>` をエスケープし、属性値ではさらに `"` をエスケープする。
+/// 手書きのプロンプトビルダーで見落とされていたエスケープ処理を提供する。
 public struct XMLSerializer: Sendable {
+    /// シリアライズ動作を制御するオプション。
     public struct Options: Sendable {
+        /// インデントと改行を使って出力を整形するかどうか。
+        ///
+        /// `false` の場合は空白を一切付与せずにシリアライズする。
         public var prettyPrinted: Bool
+        /// `prettyPrinted` が `true` のとき、各ネストレベルに付与するインデント文字列。
         public var indent: String
 
+        /// オプションを作成する。
+        ///
+        /// - Parameters:
+        ///   - prettyPrinted: 整形出力を有効にするかどうか。デフォルトは `true`。
+        ///   - indent: 整形時のインデント文字列。デフォルトは半角スペース 2 つ。
         public init(prettyPrinted: Bool = true, indent: String = "  ") {
             self.prettyPrinted = prettyPrinted
             self.indent = indent
@@ -21,12 +31,20 @@ public struct XMLSerializer: Sendable {
         self.options = options
     }
 
+    /// `XMLElement` ツリーを UTF-8 文字列へシリアライズする。
+    ///
+    /// - Parameter element: シリアライズするルート要素。
+    /// - Returns: エスケープ済みの XML テキスト。
     public func string(from element: XMLElement) -> String {
         var output = ""
         write(element, depth: 0, into: &output)
         return output
     }
 
+    /// `XMLElement` ツリーを UTF-8 エンコード済みバイト列へシリアライズする。
+    ///
+    /// - Parameter element: シリアライズするルート要素。
+    /// - Returns: `string(from:)` の結果を `.utf8` でエンコードしたデータ。
     public func data(from element: XMLElement) -> Data {
         Data(string(from: element).utf8)
     }
@@ -69,7 +87,7 @@ public struct XMLSerializer: Sendable {
         output += "\n" + String(repeating: options.indent, count: depth)
     }
 
-    /// Escapes `&`, `<`, and `>` so `text` is safe in XML element content.
+    /// `&`・`<`・`>` をエスケープし、`text` を XML 要素コンテンツ内で安全にする。
     public static func escapeText(_ text: String) -> String {
         var result = ""
         result.reserveCapacity(text.count)
@@ -84,7 +102,7 @@ public struct XMLSerializer: Sendable {
         return result
     }
 
-    /// Escapes `&`, `<`, `>`, and `"` so `text` is safe in a double-quoted XML attribute value.
+    /// `&`・`<`・`>`・`"` をエスケープし、`text` をダブルクォートで囲まれた XML 属性値内で安全にする。
     public static func escapeAttribute(_ text: String) -> String {
         var result = escapeText(text)
         result = result.replacingOccurrences(of: "\"", with: "&quot;")

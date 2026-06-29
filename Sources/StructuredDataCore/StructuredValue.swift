@@ -1,9 +1,7 @@
-/// The format-neutral intermediate representation shared across all parsers.
+/// 全パーサが共有するフォーマット非依存の中間表現。
 ///
-/// This is the common currency of the library: every format parser produces a
-/// `StructuredValue`, and the single `Decoder` bridge turns it into any
-/// `Decodable` type. Formats with richer models (YAML tags/anchors, XML
-/// attributes/mixed content) keep their own node types and project down to this.
+/// ライブラリの共通通貨。全フォーマットパーサが `StructuredValue` を生成し、単一の `Decoder` ブリッジが任意の `Decodable` 型へ変換する。
+/// YAML タグ/アンカーや XML 属性/混在コンテンツのようにより豊かなモデルを持つフォーマットは、独自ノード型を保持したうえでこの型へ射影する。
 @dynamicMemberLookup
 public enum StructuredValue: Sendable, Hashable {
     case null

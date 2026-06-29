@@ -1,11 +1,10 @@
 import Foundation
 import StructuredDataCore
 
-/// A recursive-descent RFC 8259 parser operating directly on UTF-8 bytes.
+/// UTF-8 バイト列を直接操作する再帰下降型の RFC 8259 パーサ。
 ///
-/// Layer 1 only: it validates structure and preserves numbers as text. No
-/// coercion toward user types happens here. Behaviour is pinned by the
-/// `nst/JSONTestSuite` corpus (`y_` accepted, `n_` rejected).
+/// Layer 1 専用。構造を検証し数値をテキストとして保持する。ユーザー型への型変換はここでは行わない。
+/// 挙動は `nst/JSONTestSuite`（`y_` 受理・`n_` 拒否）で固定されている。
 struct JSONScanner {
     private let bytes: [UInt8]
     private var index: Int

@@ -1,12 +1,12 @@
 # ``XMLCoding``
 
-XML document parsing and declarative tree construction, independent of the Codable bridge.
+Codable ブリッジから独立した、XML ドキュメント解析と宣言的ツリー構築。
 
 ## Overview
 
-`XMLCoding` takes a deliberately different approach from `JSONParsing` and `YAMLParsing`. Rather than flattening XML into a `StructuredValue`, it preserves the full richness of the format — ordered attributes, mixed text/element content, CDATA sections, and comments — through a dedicated tree model: ``XMLElement`` and ``XMLNode``.
+`XMLCoding` は `JSONParsing` や `YAMLParsing` とは意図的に異なるアプローチをとる。XML を `StructuredValue` へ平坦化するのではなく、専用のツリーモデル（``XMLElement`` と ``XMLNode``）を通じてフォーマットの全豊かさを保持する。順序付き属性・混在テキスト/要素コンテンツ・CDATA セクション・コメントをそのまま維持する。
 
-``XMLDocumentParser`` parses a well-formed XML document into an ``XMLElement`` tree. It handles elements, attributes, text, CDATA, comments, processing instructions, and predefined and numeric entity references. DTD validation and namespace resolution are out of scope; prefixes are preserved verbatim.
+``XMLDocumentParser`` は整形式 XML ドキュメントを ``XMLElement`` ツリーへ解析する。要素、属性、テキスト、CDATA、コメント、処理命令、定義済みおよび数値エンティティ参照を処理する。DTD バリデーションと名前空間解決は対象外で、プレフィックスはそのまま保持される。
 
 ```swift
 import XMLCoding
@@ -14,12 +14,12 @@ import XMLCoding
 let root: XMLElement = try XMLDocumentParser().parse(xmlData)
 
 let version = root.attribute("version")              // "1.2"
-let items = root.firstElement(named: "items")        // first <items> child
-let allChildren = root.elements                      // all child elements
-let bodyText = root.firstElement(named: "body")?.text  // concatenated text content
+let items = root.firstElement(named: "items")        // 最初の <items> 子要素
+let allChildren = root.elements                      // 全子要素
+let bodyText = root.firstElement(named: "body")?.text  // 連結テキストコンテンツ
 ```
 
-For building XML — for example, constructing Anthropic-style tagged prompts — use ``XMLBuilder`` together with the convenience initializers on ``XMLElement``. The result builder supports conditionals, loops, and optional children.
+XML の構築（例: Anthropic スタイルのタグ付きプロンプト）には ``XMLBuilder`` と ``XMLElement`` の便利イニシャライザを組み合わせる。リザルトビルダーは条件分岐・ループ・オプショナルな子をサポートする。
 
 ```swift
 import XMLCoding
@@ -35,10 +35,10 @@ let prompt = XMLElement("prompt") {
     XMLElement("user", text: userQuestion)
 }
 
-let xmlString = prompt.rendered()   // pretty-printed by default
+let xmlString = prompt.rendered()   // デフォルトはプリティプリント
 ```
 
-``XMLSerializer`` handles escaping correctly: `&`, `<`, and `>` in element content, plus `"` in attribute values. You can serialize any ``XMLElement`` tree to a `String` or `Data`:
+``XMLSerializer`` は正しくエスケープを処理する。要素コンテンツの `&`・`<`・`>`、属性値の `"` をエスケープする。任意の ``XMLElement`` ツリーを `String` または `Data` へシリアライズできる。
 
 ```swift
 let serializer = XMLSerializer(options: .init(prettyPrinted: false))
@@ -47,17 +47,17 @@ let compact = serializer.string(from: prompt)
 
 ## Topics
 
-### Tree Model
+### ツリーモデル
 
 - ``XMLElement``
 - ``XMLNode``
 - ``XMLAttribute``
 
-### Parsing
+### 解析
 
 - ``XMLDocumentParser``
 
-### Building and Serialization
+### 構築とシリアライズ
 
 - ``XMLBuilder``
 - ``XMLSerializer``

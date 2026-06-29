@@ -1,4 +1,4 @@
-/// A position in the source text, for diagnostics.
+/// 診断用のソーステキスト上の位置。
 public struct SourceLocation: Sendable, Hashable, CustomStringConvertible {
     public var line: Int
     public var column: Int
@@ -13,7 +13,7 @@ public struct SourceLocation: Sendable, Hashable, CustomStringConvertible {
     public var description: String { "line \(line):\(column)" }
 }
 
-/// A failure produced by a Layer 1 parser before any type conversion occurs.
+/// 型変換が行われる前の Layer 1 パーサが生成するエラー。
 public struct ParseError: Error, Sendable, CustomStringConvertible {
     public enum Kind: Sendable, Equatable {
         case unexpectedCharacter(Character)
