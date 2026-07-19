@@ -13,7 +13,7 @@ struct DateCodingTests {
 
     @Test
     func deferredToDateIsDefaultAndUnchanged() throws {
-        let value = try StructuredValue.encoding(whole)
+        let value = try StructuredValue.encoded(whole)
         // Default strategy keeps Date's standard Double encoding.
         #expect(value.numberValue != nil)
         let back = try value.decode(Date.self)
@@ -30,14 +30,14 @@ struct DateCodingTests {
     func roundTripsWholeSeconds(_ strategy: DateCodingStrategy) throws {
         let enc = EncodingOptions(dateStrategy: strategy)
         let dec = DecodingOptions(dateStrategy: strategy)
-        let value = try StructuredValue.encoding(whole, options: enc)
+        let value = try StructuredValue.encoded(whole, options: enc)
         let back = try value.decode(Date.self, options: dec)
         #expect(abs(back.timeIntervalSince1970 - whole.timeIntervalSince1970) < 0.001)
     }
 
     @Test
     func iso8601EncodesString() throws {
-        let value = try StructuredValue.encoding(whole, options: .init(dateStrategy: .iso8601))
+        let value = try StructuredValue.encoded(whole, options: .init(dateStrategy: .iso8601))
         #expect(value.stringValue == "2023-11-14T22:13:20Z")
     }
 
@@ -54,7 +54,7 @@ struct DateCodingTests {
     func nestedDatesInKeyedAndUnkeyedContainers() throws {
         let options = (EncodingOptions(dateStrategy: .iso8601), DecodingOptions(dateStrategy: .iso8601))
         let event = Event(name: "launch", at: whole, history: [whole, whole])
-        let value = try StructuredValue.encoding(event, options: options.0)
+        let value = try StructuredValue.encoded(event, options: options.0)
         #expect(value.at.string == "2023-11-14T22:13:20Z")
         #expect(value.history[0].string == "2023-11-14T22:13:20Z")
         let back = try value.decode(Event.self, options: options.1)

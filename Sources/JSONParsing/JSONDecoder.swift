@@ -38,7 +38,7 @@ public struct JSONEncoder: StructuredEncoding {
     }
 
     public func value<T: Encodable>(_ value: T) throws -> StructuredValue {
-        try StructuredValue.encoding(value, options: encodingOptions)
+        try StructuredValue.encoded(value, options: encodingOptions)
     }
 
     public func encode<T: Encodable>(_ value: T) throws -> Data {

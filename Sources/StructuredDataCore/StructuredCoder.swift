@@ -7,7 +7,7 @@ extension StructuredValue {
     }
 
     /// 任意の `Encodable` から値を構築する。
-    public static func encoding<T: Encodable>(_ value: T, options: EncodingOptions = .init()) throws -> StructuredValue {
+    public static func encoded<T: Encodable>(_ value: T, options: EncodingOptions = .init()) throws -> StructuredValue {
         try options.lower(value, codingPath: [])
     }
 }

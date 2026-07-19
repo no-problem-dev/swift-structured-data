@@ -39,7 +39,7 @@ struct CodableBridgeTests {
             name: "Grace", age: 50, emails: ["g@navy.mil"],
             address: Address(city: "NYC", zip: "10001"), nickname: "Amazing"
         )
-        let encoded = try StructuredValue.encoding(person)
+        let encoded = try StructuredValue.encoded(person)
         let decoded = try encoded.decode(Person.self)
         #expect(decoded == person)
     }
