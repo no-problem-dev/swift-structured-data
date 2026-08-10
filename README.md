@@ -82,7 +82,7 @@ Add the package to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/no-problem-dev/swift-structured-data.git", from: "1.4.0"),
+    .package(url: "https://github.com/no-problem-dev/swift-structured-data.git", from: "2.0.0"),
 ],
 ```
 
