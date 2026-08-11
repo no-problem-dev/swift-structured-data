@@ -19,4 +19,6 @@
 - `ParseError` cases naming the unsupported construct, so a caller can report which part of
   the document it could not read.
 
+## [2.0.0] - 2026-07-19
+
 See [GitHub Releases](../../releases) for changes up to and including this version.
