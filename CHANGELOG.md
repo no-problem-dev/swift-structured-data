@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-08-11
+
 ### Changed
 
 - **BREAKING** — YAML constructs this parser does not model now throw instead of being silently dropped.
