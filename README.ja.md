@@ -5,7 +5,7 @@
 外から来るデータを Swift に取り込む口を 1 つにする。形式が何であっても。
 
 ![Swift](https://img.shields.io/badge/Swift-6.2-orange.svg)
-![Platforms](https://img.shields.io/badge/Platforms-iOS%2017%20%7C%20macOS%2014%20%7C%20tvOS%2017%20%7C%20watchOS%2010%20%7C%20visionOS%201-blue.svg)
+![Platforms](https://img.shields.io/badge/Platforms-iOS%2017%20%7C%20macOS%2014%20%7C%20tvOS%2017%20%7C%20watchOS%2010%20%7C%20visionOS%201%20%7C%20Linux-blue.svg)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 呼ぶ側は値を求めるだけで、それが JSON から来たのか YAML から来たのか XML から来たのかを知る必要がありません。
@@ -84,6 +84,7 @@ dependencies: [
 ## 動作環境
 
 - iOS 17.0+ / macOS 14.0+ / tvOS 17.0+ / watchOS 10.0+ / visionOS 1.0+
+- Linux
 - Swift 6.2+
 
 ## ライセンス

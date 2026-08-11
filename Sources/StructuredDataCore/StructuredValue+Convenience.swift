@@ -41,7 +41,7 @@ extension StructuredValue {
     public init(anyValue: Any) {
         if anyValue is NSNull { self = .null; return }
         if let number = anyValue as? NSNumber {
-            if CFGetTypeID(number) == CFBooleanGetTypeID() { self = .bool(number.boolValue); return }
+            if Self.holdsBoolean(number) { self = .bool(number.boolValue); return }
             self = .number(StructuredNumber(unchecked: number.stringValue)); return
         }
         switch anyValue {
@@ -52,5 +52,20 @@ extension StructuredValue {
             self = .object(OrderedObject(value.map { ($0.key, StructuredValue(anyValue: $0.value)) }))
         default: self = .null
         }
+    }
+
+    /// Whether an `NSNumber` carries a boolean rather than a numeric value.
+    ///
+    /// Foundation files boolean instances under a dynamic class of their own — `__NSCFBoolean` on
+    /// both Apple platforms and swift-corelibs-foundation — while numeric ones land on
+    /// `__NSCFNumber` (Apple) or `NSNumber` (Linux). Comparing against that class is the portable
+    /// stand-in for `CFGetTypeID(_:) == CFBooleanGetTypeID()`, which is a CoreFoundation C API that
+    /// reaches through Foundation only on Apple and does not exist on Linux.
+    ///
+    /// `number as? Bool` is not a substitute: it succeeds for any `NSNumber` equal to 0 or 1 on
+    /// every platform, so it would report the integer 1 as `true`. Neither is `objCType`, which
+    /// spells both `Bool` and `Int8` as `c` on Apple.
+    private static func holdsBoolean(_ number: NSNumber) -> Bool {
+        type(of: number) == type(of: NSNumber(value: true))
     }
 }

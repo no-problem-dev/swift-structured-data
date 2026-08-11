@@ -5,7 +5,7 @@ English | [日本語](./README.ja.md)
 One way to read external data into Swift, whatever format it arrives in.
 
 ![Swift](https://img.shields.io/badge/Swift-6.2-orange.svg)
-![Platforms](https://img.shields.io/badge/Platforms-iOS%2017%20%7C%20macOS%2014%20%7C%20tvOS%2017%20%7C%20watchOS%2010%20%7C%20visionOS%201-blue.svg)
+![Platforms](https://img.shields.io/badge/Platforms-iOS%2017%20%7C%20macOS%2014%20%7C%20tvOS%2017%20%7C%20watchOS%2010%20%7C%20visionOS%201%20%7C%20Linux-blue.svg)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 Your code asks for a value; it does not need to know whether that value came from JSON, YAML, or
@@ -86,6 +86,7 @@ any target that names its types directly, such as one that injects `any Structur
 ## Requirements
 
 - iOS 17.0+ / macOS 14.0+ / tvOS 17.0+ / watchOS 10.0+ / visionOS 1.0+
+- Linux
 - Swift 6.2+
 
 ## License
