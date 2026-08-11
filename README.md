@@ -2,28 +2,28 @@ English | [日本語](./README.ja.md)
 
 # swift-structured-data
 
-A safe bridge from dynamic JSON, YAML, and XML into Swift's type system.
+One way to read external data into Swift, whatever format it arrives in.
 
 ![Swift](https://img.shields.io/badge/Swift-6.2-orange.svg)
 ![Platforms](https://img.shields.io/badge/Platforms-iOS%2017%20%7C%20macOS%2014%20%7C%20tvOS%2017%20%7C%20watchOS%2010%20%7C%20visionOS%201-blue.svg)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-Foundation's `JSONDecoder` mixes parsing with type conversion in a single layer, which is where its
-long-standing numeric bugs come from. This package separates the two: a parser produces a neutral
-value that has lost nothing, and a shared `Decoder` backbone converts that value to your type on
-demand.
+Your code asks for a value; it does not need to know whether that value came from JSON, YAML, or
+XML. Each format has its own parser, they all produce the same neutral value, and one `Decoder`
+backbone turns that value into your type. Changing the format your app reads is a change at one
+place.
 
 ## Features
 
-- **Numbers keep their precision** — a JSON number is held as its original decimal text and
-  converted only when a concrete type asks for it
-- **Consumers depend on a protocol** — inject `any StructuredDecoding` and swapping JSON for YAML is
-  a change at the composition root, not at every call site
-- **One backbone for every format** — a single custom `Decoder`/`Encoder` implementation, reused by
-  all three parsers
+- **The format stays out of your call sites** — inject `any StructuredDecoding`, and swapping JSON
+  for YAML is a change at the composition root
+- **One backbone for every format** — a single `Decoder`/`Encoder` implementation, shared by all
+  three parsers, so the three behave the same way
 - **Two ways in** — dynamic exploration with `value.user.name.string`, or type-safe `decode(_:)`
 - **Tolerant decoding is opt-in, per field** — `@Default`, `@LossyArray`, `@LosslessValue`
 - **Streaming partial decode** — read in-progress state out of a token-by-token LLM response
+- **Values survive the trip** — a number is carried as its original text and converted only when a
+  concrete type asks, so nothing is quietly rounded on the way in
 - **Checked against the official conformance suite** — `nst/JSONTestSuite` is bundled, covering the
   `y_`, `n_`, and `i_` cases
 

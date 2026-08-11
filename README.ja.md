@@ -2,22 +2,24 @@
 
 # swift-structured-data
 
-外部システム由来の動的な JSON / YAML / XML を、Swift の型システムへ安全に渡すための層。
+外から来るデータを Swift に取り込む口を 1 つにする。形式が何であっても。
 
 ![Swift](https://img.shields.io/badge/Swift-6.2-orange.svg)
 ![Platforms](https://img.shields.io/badge/Platforms-iOS%2017%20%7C%20macOS%2014%20%7C%20tvOS%2017%20%7C%20watchOS%2010%20%7C%20visionOS%201-blue.svg)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-Foundation の `JSONDecoder` は「正しく読む」ことと「型へ変換する」ことを 1 レイヤーで混ぜていて、
-積年の数値バグはそこから来ています。このパッケージは両者を分けます。パーサは何も失っていない中立の値を作り、
-共有の `Decoder` バックボーンが、要求されたときにだけその値を型へ変換します。
+呼ぶ側は値を求めるだけで、それが JSON から来たのか YAML から来たのか XML から来たのかを知る必要がありません。
+形式ごとにパーサがあり、どれも同じ中立の値を作り、1 つの `Decoder` バックボーンがその値を型へ変換します。
+読む形式を変えるのは 1 箇所の変更で済みます。
 
 ## 特徴
 
-- **数値の精度を壊さない** — JSON number は元の十進文字列のまま保持し、具体的な型に求められて初めて変換します
-- **消費者はプロトコルに依存する** — `any StructuredDecoding` を注入で受ければ、JSON から YAML への
+- **形式が呼び出し側に漏れない** — `any StructuredDecoding` を注入で受ければ、JSON から YAML への
   差し替えは合成ルート 1 箇所の変更で済みます
-- **全フォーマットで単一のバックボーン** — カスタム `Decoder`/`Encoder` の実装は 1 つで、3 つのパーサが再利用します
+- **全フォーマットで単一のバックボーン** — `Decoder`/`Encoder` の実装は 1 つで 3 つのパーサが共有するので、
+  3 つの振る舞いが揃います
+- **値が道中で変わらない** — 数値は元の文字列のまま運び、具体的な型に求められて初めて変換するので、
+  取り込む途中で黙って丸められません
 - **入口が 2 つある** — `value.user.name.string` の動的な探索と、型安全な `decode(_:)`
 - **寛容なデコードはフィールド単位のオプトイン** — `@Default` / `@LossyArray` / `@LosslessValue`
 - **ストリーミング部分デコード** — LLM のトークン逐次出力から途中の状態を取り出せます
