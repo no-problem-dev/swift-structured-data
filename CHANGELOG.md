@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Builds and tests on Linux. The Bool discriminator went through `CFGetTypeID`, which
+  corelibs-foundation does not expose; it now compares against `NSNumber(value: true)`'s dynamic
+  type, which reports `__NSCFBoolean` on both platforms and rejects Int and Double on both.
+
+
 ## [3.0.0] - 2026-08-11
 
 ### Changed
