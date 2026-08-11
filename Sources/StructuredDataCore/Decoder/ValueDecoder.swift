@@ -1,9 +1,9 @@
 import Foundation
-/// `StructuredValue` をソースとする `Decoder`。
+/// The decoder that turns a parsed tree into a static Swift type.
 ///
-/// 全 `Decodable` に対して「動的な値→静的な型」変換を実現するバックボーン。
-/// 全フォーマットがこの 1 実装を再利用するため、フォーマットターゲットは `StructuredValue` を生成するだけで
-/// `Codable` 完全対応・ネストされたコンテナ・`DecodingError` 報告を無償で得られる。
+/// This is the whole dynamic-to-static conversion, and every format shares this one implementation:
+/// a format target only has to produce a ``StructuredValue`` to get full `Codable` support, nested
+/// containers and `DecodingError` reporting without writing any of it.
 struct ValueDecoder: Decoder {
     let value: StructuredValue
     let options: DecodingOptions
@@ -56,7 +56,11 @@ extension StructuredValue {
         }
     }
 
-    /// この表現に保持された値を具体的なプリミティブまたは `Decodable` 型へデコードする。
+    /// Decodes into any decodable type, short-circuiting the two that must not go through the generic path.
+    ///
+    /// Asking for a ``StructuredValue`` hands back the subtree as it stands, and `Date` is
+    /// intercepted when the strategy replaces its stock `Codable` conformance. Everything else
+    /// recurses through the normal containers.
     func decodeScalar<T>(_ type: T.Type, options: DecodingOptions, codingPath: [CodingKey]) throws -> T where T: Decodable {
         if type == StructuredValue.self {
             return self as! T

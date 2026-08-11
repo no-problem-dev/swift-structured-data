@@ -1,4 +1,7 @@
-/// XML ツリーを宣言的に構築するリザルトビルダー（例: Anthropic スタイルのタグ付きプロンプト）。
+/// Builds an element tree declaratively, so a tagged prompt reads like the document it produces.
+///
+/// Values interpolated as text are escaped when the tree is written, which string concatenation
+/// does not do.
 ///
 /// ```swift
 /// let prompt = XMLElement("instructions") {
@@ -32,7 +35,7 @@ extension XMLElement {
         self.init(name: name, attributes: attributes, children: text.isEmpty ? [] : [.text(text)])
     }
 
-    /// 指定オプションでこの要素を文字列へシリアライズする。
+    /// Serializes this element to text, escaping its content on the way out.
     public func rendered(options: XMLSerializer.Options = .init()) -> String {
         XMLSerializer(options: options).string(from: self)
     }

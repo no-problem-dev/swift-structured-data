@@ -1,10 +1,10 @@
 import Foundation
 import StructuredDataCore
 
-/// 消費者向けデコードプロトコルへの JSON エントリポイント。
+/// Decodes JSON straight into a Swift type, composing the parser with the shared decoding backbone.
 ///
-/// ``JSONParser``（Layer 1）と共有デコードバックボーン（Layer 2）の薄い合成体。
-/// `any StructuredDecoding` として注入することでコールサイトをフォーマット非依存に保てる。
+/// Inject it as `any StructuredDecoding` to keep a call site from naming its format at all.
+/// ``value(from:)`` is the escape hatch when you want the parsed tree rather than a Swift type.
 public struct JSONDecoder: StructuredDecoding {
     public var parsingOptions: JSONParsingOptions
     public var decodingOptions: DecodingOptions
@@ -27,7 +27,7 @@ public struct JSONDecoder: StructuredDecoding {
     }
 }
 
-/// 消費者向けエンコードプロトコルへの JSON エントリポイント。
+/// Encodes a Swift value as JSON, composing the shared encoding backbone with the serializer.
 public struct JSONEncoder: StructuredEncoding {
     public var encodingOptions: EncodingOptions
     public var serializerOptions: JSONSerializer.Options

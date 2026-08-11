@@ -1,12 +1,31 @@
 import Foundation
 import StructuredDataCore
 
-/// YAML 1.2 Core スキーマに準拠し、中立の ``StructuredValue`` を生成するパーサ。
+/// Reads the JSON-superset subset of YAML that configuration files actually use, under the 1.2 Core schema.
 ///
-/// 多くの外部システムが使う JSON 上位互換サブセットをカバーする。
-/// ブロック/フローのマッピング・シーケンス、プレイン/シングルクォート/ダブルクォートスカラー、
-/// リテラル/フォールドブロックスカラー、コメント、マルチドキュメントストリームに対応。
-/// タグ、アンカー/エイリアス、複合キーは未解決。
+/// This is not a full YAML implementation and does not try to be. What it handles: block and flow
+/// mappings and sequences, plain and single- and double-quoted scalars, literal and folded block
+/// scalars with their chomping and explicit-indent indicators, comments, and multi-document
+/// streams split on `---`.
+///
+/// What it does not handle matters more, because none of it is an error — each is quietly
+/// discarded, so a document using these features parses into something wrong instead of failing:
+///
+/// - **Anchors and aliases.** Both are stripped as text. An anchor's value survives, but an alias
+///   referring to it decodes as null; nothing is ever substituted for it.
+/// - **Tags.** Stripped, so `!!str 42` resolves as the number 42 rather than the string.
+/// - **Complex keys.** A `?` line is read as an ordinary plain scalar.
+/// - **Directives.** `%YAML` and `%TAG` lines are skipped without being applied.
+/// - **Tabs as indentation.** Only spaces are counted, so a tab-indented line reads as
+///   column zero and lands in the wrong parent.
+/// - **Repeated keys.** Always all kept, with no policy applied.
+///
+/// Malformed input is mostly not rejected either: against the official YAML test suite this
+/// accepts the majority of documents that a conforming parser is required to reject. Treat it as a
+/// reader for input you control, not as a validator.
+///
+/// ``parse(_:)`` returns the first document of a stream and silently discards the rest; use
+/// ``parseAll(_:)`` when there may be more than one.
 public struct YAMLParser: DataParser {
     public init() {}
 
@@ -19,7 +38,10 @@ public struct YAMLParser: DataParser {
         try parse(Data(string.utf8))
     }
 
-    /// `---` 区切りで複数の YAML ドキュメントを解析し、全ドキュメントを配列で返す。
+    /// Parses every document in a multi-document stream, rather than only the first.
+    ///
+    /// Documents that hold no content at all are omitted, and a stream that is entirely empty
+    /// yields a single null document.
     public func parseAll(_ data: Data) throws -> [StructuredValue] {
         guard let text = String(data: data, encoding: .utf8) else { throw ParseError(.invalidUTF8) }
         var documents: [StructuredValue] = []

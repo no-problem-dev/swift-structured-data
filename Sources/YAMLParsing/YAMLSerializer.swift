@@ -1,19 +1,25 @@
 import Foundation
 import StructuredDataCore
 
-/// ``StructuredValue`` を YAML 1.2 Core スキーマのテキストへシリアライズする。
+/// Writes a value as YAML in the same Core subset the parser reads, so a round trip returns the value unchanged.
 ///
-/// 同じ Core サブセット上での ``YAMLParser`` の逆変換。`parse(serialize(v)) == v` を保証する。
-/// 非空コレクションはブロックスタイル、空コレクションはフロー（`[]` / `{}`）で出力する。
-/// スカラーは同じ値に逆解決できる場合はプレインで、それ以外はダブルクォートで出力するため、
-/// `"1.0"` のような文字列は数値へ強制変換されず文字列として維持される。
+/// Non-empty collections are written in block style and empty ones inline as `[]` and `{}`.
 ///
-/// タグ、アンカー/エイリアス、複合キーは対象外（パーサが除去する）。ラウンドトリップ可能な Core サブセットに対応。
+/// A string is written plain only when reading it back plain would give the same string, and
+/// double-quoted otherwise, which is what keeps `"1.0"` and `"true"` from coming back as a number
+/// and a boolean. Numbers are written from their stored text, so a number built outside the JSON
+/// grammar is reproduced as-is.
+///
+/// The output uses no tags, anchors, aliases or complex keys, matching the subset the parser
+/// understands — a document that needs any of them cannot be produced here.
 public struct YAMLSerializer: DataSerializer {
     public struct Options: Sendable {
-        /// マッピングキーを挿入順ではなく辞書順でソートする。
+        /// Sorts mapping keys alphabetically instead of writing them in source order.
         public var sortKeys: Bool
-        /// 1 レベルあたりのインデント文字列。パーサがネストを識別できるよう、最低 1 スペース必要。
+        /// The indent added per nesting level, which must contain at least one space.
+        ///
+        /// Indentation is the only thing marking nesting in block style, so an empty string here
+        /// produces output the parser reads back flat.
         public var indent: String
 
         public init(sortKeys: Bool = false, indent: String = "  ") {
@@ -100,7 +106,12 @@ public struct YAMLSerializer: DataSerializer {
         Self.plainIsSafe(string) ? string : doubleQuoted(string)
     }
 
-    /// 文字列をプレインスカラーとして出力したとき、パーサが同一の文字列へ逆解決できる場合に `true`。
+    /// Whether writing this string unquoted would read back as the same string.
+    ///
+    /// False for anything the Core schema would resolve as null, a boolean or a number; for
+    /// leading or trailing spaces, which the block parser trims; for control characters, which a
+    /// plain scalar cannot hold; for a leading indicator character, which changes how the line is
+    /// read; and for the sequences that would start a mapping or a comment.
     static func plainIsSafe(_ string: String) -> Bool {
         guard !string.isEmpty else { return false }
         // Would a plain scalar coerce to null/bool/number under the Core schema?

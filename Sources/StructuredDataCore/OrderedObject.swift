@@ -1,21 +1,34 @@
-/// 単一オブジェクト内の重複キー名の処理ポリシー。
+/// What to do when one object names the same key twice.
 ///
-/// RFC 8259 は重複名の挙動を実装定義としている。このポリシーによって解析時に明示的に選択する。
+/// RFC 8259 leaves this to the implementation, which means a document with a repeated name has no
+/// single correct reading. Choosing here makes the reading explicit at parse time instead of
+/// leaving it to whichever code happens to look the key up.
 public enum DuplicateKeyPolicy: Sendable {
-    /// 最後の出現を採用（JavaScript 互換のデフォルト）。
+    /// Keeps the last occurrence, matching what JavaScript's own parser does.
     case lastWins
-    /// 最初の出現を採用。
+    /// Keeps the first occurrence.
     case firstWins
-    /// ドキュメントを拒否（I-JSON / RFC 7493 の厳格モード）。
+    /// Rejects the whole document, as RFC 7493 (I-JSON) requires.
     case reject
-    /// 出現順序を保持したまま全て保存する。
+    /// Keeps every occurrence in source order, leaving the ambiguity in the tree.
+    ///
+    /// Lookups then return the first of the repeated entries while serialization writes all of
+    /// them, so a round trip preserves the duplication rather than resolving it.
     case preserveAll
 }
 
-/// 挿入順序を保持する文字列キーコレクション。
+/// A string-keyed collection that remembers the order its keys arrived in.
 ///
-/// JSON/YAML のオブジェクトは仕様上は順序なしだが、ソース順を保持することで再シリアライズと diff が安定する。
-/// ルックアップは最初のマッチを返し、デコーダのキー解決と一致する。
+/// JSON and YAML objects are unordered by specification, but discarding the source order makes
+/// re-serialization and diffs churn for no reason, so the order is kept and written back out.
+/// It carries no meaning beyond that: two objects with the same pairs in different orders are
+/// equal, and hashing agrees.
+///
+/// Keys are not required to be unique — what a parser stores depends on its ``DuplicateKeyPolicy``,
+/// and both the YAML parser and the tolerant JSON scanner always keep every occurrence. When they
+/// repeat, the two ways of reading a key disagree: a subscript returns the first occurrence, while
+/// decoding into a `Decodable` type resolves the last one. Resolve duplicates at parse time if
+/// that difference would reach anyone.
 public struct OrderedObject: Sendable, Hashable {
     public private(set) var entries: [(key: String, value: StructuredValue)]
 
@@ -25,7 +38,10 @@ public struct OrderedObject: Sendable, Hashable {
         self.entries = entries
     }
 
-    /// Swift 辞書から構築する。挿入順は不定（JSON オブジェクトは順序なし）のため、順序が重要な場合は entries イニシャライザを使う。
+    /// Builds an object from a Swift dictionary, in whatever order the dictionary iterates.
+    ///
+    /// That order is arbitrary and varies between runs. Use the entries initializer when the
+    /// output order has to be stable.
     public init(_ dictionary: [String: StructuredValue]) {
         self.entries = dictionary.map { ($0.key, $0.value) }
     }
@@ -53,21 +69,24 @@ public struct OrderedObject: Sendable, Hashable {
         entries.append((key, value))
     }
 
-    /// 指定キーのエントリを削除し、その値を返す。キーが存在しない場合は `nil` を返す。
+    /// Removes the first entry with this key and returns its value, leaving any later duplicates in place.
     @discardableResult
     public mutating func removeValue(forKey key: String) -> StructuredValue? {
         guard let index = entries.firstIndex(where: { $0.key == key }) else { return nil }
         return entries.remove(at: index).value
     }
 
-    /// 標準 Swift 辞書ビュー（挿入順は失われる）。順序が重要な場合は `entries` を使う。
+    /// A plain Swift dictionary view, which drops the ordering and collapses duplicate keys to the last one.
     public var dictionary: [String: StructuredValue] {
         Dictionary(entries.map { ($0.key, $0.value) }, uniquingKeysWith: { _, last in last })
     }
 
-    /// 生エントリから重複キーポリシーを適用してオブジェクトを構築する。
+    /// Builds an object from parsed entries, resolving repeated keys as the policy dictates.
     ///
-    /// `nil` を返すのは `policy` が `.reject` かつ重複が存在する場合のみ。
+    /// Returns nil only under ``DuplicateKeyPolicy/reject`` and only when a key actually repeats;
+    /// every other policy always produces an object. Under the winner-takes-one policies the
+    /// surviving entry sits at the position of the first occurrence, so source order is preserved
+    /// even when the value comes from a later one.
     public static func make(
         from raw: [(key: String, value: StructuredValue)],
         policy: DuplicateKeyPolicy
@@ -92,8 +111,9 @@ public struct OrderedObject: Sendable, Hashable {
         }
     }
 
-    /// 順序非依存。JSON/YAML オブジェクトは意味的に順序なしのため、同じ名前/値ペアを持つ 2 つのオブジェクトは順序によらず等しい。
-    /// 挿入順はシリアライズのために保持される。
+    /// Compares pairs, not order: two objects holding the same names and values are equal however they are arranged.
+    ///
+    /// Order is carried for serialization, not meaning, so it stays out of the comparison.
     public static func == (lhs: OrderedObject, rhs: OrderedObject) -> Bool {
         guard lhs.entries.count == rhs.entries.count else { return false }
         var rhsMap: [String: StructuredValue] = [:]

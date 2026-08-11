@@ -1,3 +1,12 @@
+/// Resolves coding keys against an object, applying the key strategy to the document's names once up front.
+///
+/// The strategy rewrites the incoming names, and lookup then compares against the Swift-side key
+/// verbatim. Numbers behave exactly as in ``SingleValueContainer``, which does the actual work.
+///
+/// Where a name repeats after conversion — either because the document repeated it or because the
+/// strategy mapped two names together — the last occurrence supplies the value while the key holds
+/// the position of the first. That resolves the opposite way from a subscript on ``OrderedObject``,
+/// which returns the first.
 struct KeyedValueContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
     let options: DecodingOptions
     let codingPath: [CodingKey]

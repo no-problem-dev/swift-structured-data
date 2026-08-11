@@ -21,10 +21,12 @@ final class ValueRef {
 final class ArrayRef { var elements: [ValueRef] = [] }
 final class ObjectRef { var entries: [(key: String, value: ValueRef)] = [] }
 
-/// 任意の `Encodable` を `StructuredValue` へ変換する `Encoder`。
+/// The encoder that turns any Swift value into a tree, shared by every format serializer.
 ///
-/// ``ValueDecoder`` の鏡像。全フォーマットシリアライザが再利用する 1 実装。
-/// エンコードは共有参照ツリーを変更し、ネスト/スーパーエンコーダがそれぞれのスロットへ書き込む。``finalize()`` で解決する。
+/// The mirror of ``ValueDecoder``. Encoding mutates a tree of reference nodes so that nested and
+/// super encoders can each hold on to their own slot and fill it in later, in whatever order the
+/// `Encodable` implementations happen to run; ``finalize()`` resolves that tree into an immutable
+/// value once the writing is done.
 final class ValueEncoder: Encoder {
     let options: EncodingOptions
     var codingPath: [CodingKey]
@@ -69,7 +71,10 @@ final class ValueEncoder: Encoder {
 }
 
 extension EncodingOptions {
-    /// 単一の `Encodable` を不変の `StructuredValue` へエンコードする。
+    /// Encodes one value into an immutable tree, passing an existing tree and an intercepted date straight through.
+    ///
+    /// Floating-point values become text via `String(_:)`, which round-trips finite values exactly
+    /// but writes a non-finite one as `inf` or `nan` — text no JSON parser accepts.
     func lower<T: Encodable>(_ value: T, codingPath: [CodingKey]) throws -> StructuredValue {
         if let value = value as? StructuredValue { return value }
         if let date = value as? Date, dateStrategy.interceptsDate { return dateStrategy.encode(date) }

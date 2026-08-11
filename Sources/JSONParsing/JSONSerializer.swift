@@ -1,7 +1,16 @@
 import Foundation
 import StructuredDataCore
 
-/// ``StructuredValue`` を RFC 8259 JSON バイト列へシリアライズする。
+/// Writes a value back out as JSON, reproducing each number exactly as its text was stored.
+///
+/// Numbers are copied through verbatim rather than reformatted, which is what makes a parse and
+/// serialize round trip byte-stable for them. The same directness means a number built outside the
+/// JSON grammar is written out as it stands: encoding a non-finite `Double` produces `inf` or
+/// `nan` in the output, which no parser will read back.
+///
+/// Strings escape only what the grammar requires — the two mandatory characters, the five
+/// short escapes, and remaining control characters as `\u00xx`. Text above U+007F is written as
+/// raw UTF-8 rather than escaped.
 public struct JSONSerializer: DataSerializer {
     public struct Options: Sendable {
         public var prettyPrinted: Bool

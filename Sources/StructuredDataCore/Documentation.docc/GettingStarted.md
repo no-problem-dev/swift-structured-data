@@ -1,18 +1,18 @@
-# StructuredDataCore 入門
+# Getting Started
 
-swift-structured-data をパッケージに追加し、統一 API で JSON・YAML・XML のデコードを始める。
+Add swift-structured-data to your package and decode JSON, YAML, and XML through one API.
 
-## インストール
+## Installation
 
-`Package.swift` の dependencies に追加する。
+Add the package to the dependencies in your `Package.swift`.
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/no-problem-dev/swift-structured-data.git", from: "1.4.0"),
+    .package(url: "https://github.com/no-problem-dev/swift-structured-data.git", from: "2.0.0"),
 ],
 ```
 
-次に必要なターゲットを追加する。
+Then add the products you need to a target.
 
 ```swift
 targets: [
@@ -20,44 +20,45 @@ targets: [
         name: "MyTarget",
         dependencies: [
             .product(name: "StructuredDataCore", package: "swift-structured-data"),
-            .product(name: "JSONParsing",         package: "swift-structured-data"),
-            .product(name: "YAMLParsing",         package: "swift-structured-data"),
-            .product(name: "XMLCoding",            package: "swift-structured-data"),
+            .product(name: "JSONParsing",        package: "swift-structured-data"),
+            .product(name: "YAMLParsing",        package: "swift-structured-data"),
+            .product(name: "XMLCoding",          package: "swift-structured-data"),
         ]
     ),
 ]
 ```
 
-必要なターゲットだけを import する。各フォーマットライブラリは独立しており、`StructuredDataCore` は自動的に再エクスポートされる。
+The format libraries are independent of one another, so depend only on the ones you use. Each one is built on `StructuredDataCore` but does not re-export it, so any file that names a core type directly — ``StructuredValue``, ``DecodingOptions``, or a protocol such as ``StructuredDecoding`` — must import `StructuredDataCore` as well.
 
-## 基本的な使い方
+## Basic Usage
 
-### StructuredValue — 中立の表現
+### StructuredValue — the neutral representation
 
-全フォーマットパーサは ``StructuredValue`` を生成する。`.null`、`.bool`、`.number`、`.string`、`.array`、`.object` の 6 ケースを持つ enum。
+Every format parser produces a ``StructuredValue``: an enum with six cases — `.null`, `.bool`, `.number`, `.string`, `.array`, and `.object`.
 
 ```swift
 import StructuredDataCore
 
-// リテラルで値を構築する
+// Build a value from literals.
 let value: StructuredValue = [
     "name": "Alice",
     "age": 30,
     "active": true,
 ]
 
-// 動的メンバーアクセス — スローしない。欠損パスは .null を返す
+// Dynamic member lookup — never throws. A missing path surfaces as .null.
 let name = value.name.string          // "Alice"
-let city = value.address.city.string  // nil（欠損パス → .null → nil）
+let city = value.address.city.string  // nil (missing path → .null → nil)
 
-// キーベースの型付きアクセサ
+// Typed key-based accessors.
 let age  = value.int("age")           // 30
 let flag = value.bool("active")       // true
 ```
 
-### JSONDecoder — JSON を Codable へ
+### JSONDecoder — JSON into Codable
 
 ```swift
+import StructuredDataCore
 import JSONParsing
 
 struct Article: Decodable {
@@ -66,12 +67,12 @@ struct Article: Decodable {
 }
 
 let decoder = JSONDecoder(
-    decodingOptions: .init(keyStrategy: .convertFromSnakeCase)
+    decodingOptions: DecodingOptions(keyStrategy: .convertFromSnakeCase)
 )
 let article = try decoder.decode(Article.self, from: jsonData)
 ```
 
-`any StructuredDecoding` として使うことでコードをフォーマット非依存に保てる。
+Accepting `any StructuredDecoding` keeps your own code format-independent.
 
 ```swift
 func parse<T: Decodable>(_ type: T.Type, from data: Data, decoder: any StructuredDecoding) throws -> T {
@@ -79,38 +80,39 @@ func parse<T: Decodable>(_ type: T.Type, from data: Data, decoder: any Structure
 }
 ```
 
-### YAMLDecoder — YAML を Codable へ
+### YAMLDecoder — YAML into Codable
 
-`YAMLDecoder` は `JSONDecoder` と同じ ``StructuredDecoding`` プロトコルを公開する。JSON デコーダが動く箇所にそのまま差し込める。
+`YAMLDecoder` exposes the same ``StructuredDecoding`` protocol as `JSONDecoder`, so it drops into any place the JSON decoder already works.
 
 ```swift
+import StructuredDataCore
 import YAMLParsing
 
 let decoder = YAMLDecoder(
-    decodingOptions: .init(keyStrategy: .convertFromSnakeCase)
+    decodingOptions: DecodingOptions(keyStrategy: .convertFromSnakeCase)
 )
 let config = try decoder.decode(AppConfig.self, from: yamlData)
 ```
 
-`YAMLParser` はマルチドキュメントストリームもサポートする。
+`YAMLParser` also reads multi-document streams.
 
 ```swift
 let documents: [StructuredValue] = try YAMLParser().parseAll(yamlData)
 ```
 
-### XMLDocumentParser + XMLBuilder — XML ツリー
+### XMLDocumentParser and XMLBuilder — the XML tree
 
-XML は独自のリッチなモデル（`XMLElement` / `XMLNode`）を持ち、属性・混在コンテンツ・CDATA を保持する。
+XML has a richer model of its own — `XMLElement` and `XMLNode` — that preserves attributes, mixed content, and CDATA.
 
 ```swift
 import XMLCoding
 
-// XML ドキュメントを解析する
-let root: XMLElement = try XMLDocumentParser().parse(xmlData)
-let version = root.attribute("version")         // 属性の取り出し
-let items = root.firstElement(named: "items")   // 最初にマッチした子要素
+// Parse an XML document.
+let root = try XMLDocumentParser().parse(xmlData)
+let version = root.attribute("version")         // read an attribute
+let items = root.firstElement(named: "items")   // first matching child element
 
-// リザルトビルダーで XML を構築する（例: Anthropic プロンプトタグ）
+// Build XML with the result builder (for example, Anthropic prompt tags).
 let prompt = XMLElement("prompt") {
     XMLElement("system", text: "You are a data analyst.")
     XMLElement("user") {
@@ -120,15 +122,15 @@ let prompt = XMLElement("prompt") {
 let xmlString = prompt.rendered()
 ```
 
-XML ツリーを ``StructuredValue`` へ射影して Codable デコードしたい場合は、アプリケーション層で `XMLElement.structuredValue` を実装するか、ツリーを直接走査する。
+`XMLCoding` deliberately stays outside the `Codable` bridge: there is no built-in projection from an XML tree to a ``StructuredValue``. If you need one, write it in your application layer against the shape of your documents, or walk the tree directly.
 
-### パーサの選び方
+### Choosing a parser
 
-| 状況 | 使うもの |
+| Situation | What to use |
 |---|---|
-| 通常の REST/LLM JSON ペイロード | `JSONDecoder` |
-| LLM トークンストリーム（部分 JSON） | `StreamingJSONParser` |
-| 設定ファイル | `YAMLDecoder` |
-| Anthropic XML プロンプトタグ | `XMLDocumentParser` + `XMLBuilder` |
-| 生の中間値 | `JSONParser` / `YAMLParser` 直接 |
-| フォーマット非依存デコード | `any StructuredDecoding` |
+| Ordinary REST or LLM JSON payloads | `JSONDecoder` |
+| LLM token streams (partial JSON) | `StreamingJSONParser` |
+| Configuration files | `YAMLDecoder` |
+| Anthropic XML prompt tags | `XMLDocumentParser` and `XMLBuilder` |
+| Raw intermediate values | `JSONParser` or `YAMLParser` directly |
+| Format-independent decoding | `any StructuredDecoding` |

@@ -1,6 +1,15 @@
 import StructuredDataCore
 
-/// YAML フロースタイル（`[...]`、`{...}`、クォートスカラー）を解析し、プレインフロースカラーを Core スキーマで解決する。
+/// Reads YAML's inline forms — bracketed sequences, braced mappings and quoted scalars — on a single line.
+///
+/// Plain scalars inside a flow collection go through the same Core schema resolution as block
+/// scalars. A trailing comma before the closing bracket is accepted, and a mapping key written
+/// with no value takes null.
+///
+/// Double quotes support the escapes YAML defines, including `\x`, `\u` and `\U`, with an escape
+/// naming an unpaired surrogate becoming U+FFFD; an unrecognised escape yields the character
+/// itself. Single quotes take no escapes at all beyond a doubled `''` for a literal quote.
+/// Anchors, aliases and tags are not recognised here, so they read as part of a plain scalar.
 struct YAMLFlowScanner {
     private let chars: [Character]
     private var index: Int

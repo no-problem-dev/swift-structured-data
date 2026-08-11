@@ -1,9 +1,28 @@
 import StructuredDataCore
 
-/// 不完全な JSON プレフィックスへの最善努力パーサ。
+/// A best-effort reader for a JSON document that has not finished arriving.
 ///
-/// ``JSONScanner`` と異なりスローしない。入力が構造の途中で終了した場合は、末尾の不完全トークンを除いて理解できた部分を返す。
-/// LLM の部分出力のストリーミングデコードを支える実装。
+/// Never throws. Where the strict scanner reports the first thing it cannot accept, this one stops
+/// reading and returns everything it understood up to that point, dropping the incomplete token at
+/// the end. That is what makes a half-received LLM response renderable while it streams.
+///
+/// What it forgives beyond the grammar is narrow and worth knowing exactly:
+///
+/// - **Truncation anywhere.** An unterminated string keeps the characters read so far, an
+///   unterminated object or array closes at the last complete member, and a partial `tru` or `1.`
+///   is dropped entirely. Trailing bytes that are not valid UTF-8 yet are trimmed off the string.
+/// - **Trailing commas.** `[1,]` and `{"a":1,}` parse as the one-element forms.
+/// - **Anything after the top-level value.** Not inspected, so trailing prose after a closing
+///   brace is silently ignored rather than reported.
+/// - **Repeated keys.** Always all kept, in source order, with no policy applied.
+///
+/// It does **not** accept comments, single-quoted strings, unquoted keys, `NaN` or `Infinity`, and
+/// it does not repair a malformed number such as `01` — each of these simply ends the read, so
+/// `{'a':1}` yields an empty object rather than an error or a parsed one.
+///
+/// One difference from the strict scanner is a real loss rather than a tolerance: `\u` escapes are
+/// decoded one at a time and surrogates are not paired, so an astral character written as a
+/// surrogate pair disappears from the string instead of becoming U+FFFD or the character itself.
 struct TolerantJSONScanner {
     private let bytes: [UInt8]
     private var index: Int

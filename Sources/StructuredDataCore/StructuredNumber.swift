@@ -1,35 +1,72 @@
 import Foundation
 
-/// JSON 文法の数値を元の十進テキストのまま保持する型。
+/// A number kept as the decimal text it was written as, converted only when a Swift type is asked for.
 ///
-/// JSON 数値には定義済み精度も整数/実数の区別もないため、`Double` に即変換すると `9223372036854775808` や `0.1` のような値で情報が失われる。
-/// `StructuredNumber` はソーステキストを保持し、具体的な Swift 型が要求されるまで変換を遅延する。Go の `json.Number` や serde の任意精度モードに倣った設計。
+/// JSON numbers have neither a defined precision nor an integer/real distinction, so converting
+/// eagerly to `Double` destroys information in values such as `9223372036854775808` and `0.1`.
+/// This type stores the source text byte for byte — its exponent spelling, its sign, its trailing
+/// zeros — and every accessor converts from that text. Nothing is narrowed on the way in, so an
+/// integer literal too large for `Int64` still arrives intact and is readable through ``uint64``
+/// or ``decimal``. Precision is lost only at the accessor you pick, never at parse time.
+/// Modelled on Go's `json.Number` and serde's arbitrary-precision mode.
+///
+/// Equality and hashing compare mathematical value, not spelling, and never route through
+/// `Double`: the text is reduced to a sign, its significant digits and a decimal exponent, so
+/// `1`, `1.0`, `1e0` and `100e-2` are one value, and `-0` equals `0`. Two numbers can therefore
+/// be equal while their ``text`` — and hence their serialized form — differs.
 public struct StructuredNumber: Sendable, Hashable {
-    /// JSON 数値文法に準拠することが保証された元のテキスト表現。
+    /// The number exactly as it was written in the source, and exactly as a serializer will write it back.
+    ///
+    /// Parsers only ever store text that satisfies the JSON number grammar. ``init(unchecked:)``
+    /// stores whatever it is handed, so this can also hold text no JSON parser would accept.
     public let text: String
 
-    /// JSON 数値として妥当であることが既知のテキストをラップする（パーサが生成した値など）。
+    /// Stores text already known to be a JSON number, such as a parser's own slice of the input.
+    ///
+    /// Nothing is checked. Text outside the JSON grammar — `007`, `inf`, `nan`, `0x1F` — is stored
+    /// as given and written back verbatim by serializers, producing output that will not parse.
+    /// Round-tripping through a Swift `Double` reaches here too: `String(Double.infinity)` is
+    /// `"inf"`, so encoding a non-finite `Double` yields invalid JSON rather than an error.
     public init(unchecked text: String) {
         self.text = text
     }
 
-    /// JSON 数値文法に準拠する場合のみテキストをラップする。
+    /// Stores text only if it is a valid JSON number, and returns nil otherwise.
+    ///
+    /// Applies the RFC 8259 grammar: an optional leading `-`, no redundant leading zero, at least
+    /// one digit on each side of a decimal point, and at least one digit after any exponent
+    /// marker. So `+1`, `.5`, `5.`, `01`, `1e`, `NaN` and `Infinity` are all rejected, while
+    /// `1e999` is accepted — the grammar bounds the spelling, not the magnitude.
     public init?(validating text: String) {
         guard StructuredNumber.isValid(text) else { return nil }
         self.text = text
     }
 
-    /// `Int` として取り出した値。テキストが正確な整数を表さない場合は `nil`。
+    /// The value when it is spelled as a plain integer, and nil when it is not.
+    ///
+    /// This tests the spelling, not the quantity: `1.0` and `1e2` both give nil even though they
+    /// denote whole numbers, and so does any literal outside `Int`'s range. Use ``coercedInt``
+    /// when you want those forms accepted.
     public var int: Int? { Int(text) }
-    /// `Int64` として取り出した値。テキストが正確な 64 ビット整数を表さない場合は `nil`。
+    /// The value when it is spelled as a plain integer that fits in 64 bits, and nil when it is not.
+    ///
+    /// A literal above `Int64.max` gives nil here but still reads through ``uint64``, because the
+    /// digits were never discarded.
     public var int64: Int64? { Int64(text) }
-    /// `UInt64` として取り出した値。テキストが正確な符号なし 64 ビット整数を表さない場合は `nil`。
+    /// The value when it is spelled as a plain non-negative integer that fits in 64 bits, and nil when it is not.
     public var uint64: UInt64? { UInt64(text) }
 
-    /// `Decimal` として取り出した値。範囲内の値では `Double` よりも精度を保持する。
+    /// The value as a decimal, which keeps far more digits than a double within its range.
+    ///
+    /// This is the accessor to reach for with money and with any literal whose digits matter.
+    /// Returns nil when the text cannot be represented as a `Decimal` at all.
     public var decimal: Decimal? { Decimal(string: text) }
 
-    /// `Double` として取り出した値。IEEE-754 の正確な範囲を超える大きさではロスが生じる。
+    /// The value as a double, rounded to the nearest representable one.
+    ///
+    /// Everything past 17 significant digits is lost, and the loss is silent. A magnitude beyond
+    /// the IEEE-754 range becomes infinity rather than an error, one below it flushes to zero, and
+    /// text that is not a number at all — reachable only through ``init(unchecked:)`` — gives NaN.
     public var double: Double { Double(text) ?? .nan }
 
     public static func == (lhs: StructuredNumber, rhs: StructuredNumber) -> Bool {
@@ -51,10 +88,11 @@ extension StructuredNumber: CustomStringConvertible {
 }
 
 extension StructuredNumber {
-    /// 等値判定とハッシュに使う正規化済み数値表現。
+    /// The spelling-independent form that equality and hashing actually compare.
     ///
-    /// 同じ数学的値を示せば等しいとみなすため、`1`、`1.0`、`1e0`、`100e-2`（==1）は全て等しい。
-    /// 比較はテキストのみで行い、`Double` を経由しない。
+    /// A number reduces to its sign, its significant digits with leading and trailing zeros
+    /// removed, and the decimal exponent implied by the point and any explicit exponent. Since
+    /// this is derived from the text alone, no rounding enters the comparison.
     fileprivate struct Canonical: Hashable {
         var negative: Bool
         var digits: String

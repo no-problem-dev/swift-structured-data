@@ -1,6 +1,12 @@
-/// `StructuredValue` を `Decodable` 型へ変換する際のチューニングオプション。
+/// How a parsed tree is turned into Swift types: key naming and date handling.
 public struct DecodingOptions: Sendable {
-    /// ペイロードのオブジェクトキーを Swift プロパティ名へマップする戦略。
+    /// How to rewrite the document's key names before matching them against Swift property names.
+    ///
+    /// The conversions split on a separator and capitalise each following segment. They are not
+    /// reversible and not Foundation-compatible at the edges: a leading separator is dropped and
+    /// its segment capitalised, so `_id` matches a property named `Id`, and repeated separators
+    /// collapse. An acronym cannot be recovered, since `user_i_d` is what
+    /// ``EncodingOptions/KeyStrategy/convertToSnakeCase`` produces for `userID`.
     public enum KeyStrategy: Sendable {
         case useDefaultKeys
         case convertFromSnakeCase

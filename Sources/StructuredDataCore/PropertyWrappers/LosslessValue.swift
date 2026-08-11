@@ -1,7 +1,17 @@
-/// API が異なるプリミティブ型で返す可能性のある値をデコードするプロパティラッパー。
+/// Reads a field whose primitive type the producer is inconsistent about, such as a number quoted as a string.
 ///
-/// 例: 文字列 `"42"` として届く数値や `"true"` として届く Bool。
-/// 型が一致しない場合は文字列経由のラウンドトリップで再試行するため、上流の型付けの揺れでデコードが壊れない。
+/// Four attempts, in order, and the first that yields a value wins:
+///
+/// 1. Decode the target type directly.
+/// 2. Decode a string and reconstruct the value from it — this is the case that recovers `"42"`.
+/// 3. Decode a `Double` and reconstruct from its text.
+/// 4. Decode a `Bool` and reconstruct from `"true"` or `"false"`.
+///
+/// If all four fail it throws, so unlike the defaulting wrapper nothing is silently substituted.
+///
+/// Reconstruction always goes through text, which decides what the numeric steps can and cannot
+/// do. An integer field recovers `"42"` but not `42.0`, because the double's text is `"42.0"` and
+/// no integer parses from that — this widens the accepted spellings, it does not round or truncate.
 @propertyWrapper
 public struct LosslessValue<Value: LosslessStringConvertible & Codable & Sendable>: Codable, Sendable {
     public var wrappedValue: Value

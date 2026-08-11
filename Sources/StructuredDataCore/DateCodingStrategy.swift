@@ -1,32 +1,39 @@
 import Foundation
 
-/// `Date` と ``StructuredValue`` 間の相互変換方法を制御する。
+/// Which wire shape a date takes, chosen once instead of per type.
 ///
-/// `Date` の標準 `Codable` 準拠は `Double`（参照日からの秒数）をエンコードするが、多くの Web/LLM API が使う ISO 8601 文字列とは一致しない。
-/// このストラテジーはスカラーパスで `Date` をインターセプトし、`CodingKeys` を書かずにワイヤーフォーマットを選択できるようにする。
-/// デフォルトは ``deferredToDate`` のため、オプトインしない限り挙動は変わらない。
+/// A `Date` encodes itself as a `Double` counting seconds from its own reference date, which is
+/// almost never what a web or LLM API sends. Setting a strategy here intercepts dates on the scalar
+/// path, so the wire format changes without writing `CodingKeys` or a custom `init(from:)` in every
+/// model. The default leaves the stock behaviour untouched.
 public enum DateCodingStrategy: Sendable {
-    /// `Date` の標準 `Codable`（`Double`）に委譲する。インターセプトなし。
+    /// Leaves dates to their own conformance, which counts seconds from 2001-01-01 UTC.
     case deferredToDate
-    /// RFC 3339 / ISO 8601 インターネット日時形式（例: `2024-01-02T03:04:05Z`）。
+    /// Whole-second RFC 3339 internet date-time, such as 2024-01-02T03:04:05Z.
+    ///
+    /// Decoding requires a match, so a payload carrying fractional seconds fails against this.
     case iso8601
-    /// 小数秒付き ISO 8601（例: `2024-01-02T03:04:05.123Z`）。
+    /// RFC 3339 internet date-time with fractional seconds, such as 2024-01-02T03:04:05.123Z.
+    ///
+    /// Decoding requires the fraction to be present.
     case iso8601WithFractional
-    /// 1970 年起点の秒数を表す JSON 数値。
+    /// A number counting seconds from the 1970 epoch.
     case secondsSince1970
-    /// 1970 年起点のミリ秒数を表す JSON 数値。
+    /// A number counting milliseconds from the 1970 epoch.
     case millisecondsSince1970
-    /// LLM/Web API 向け寛容なデフォルト。小数秒付き ISO 8601 でエンコードし、
-    /// デコード時は小数秒あり/なし ISO 8601、次いで `yyyy-MM-dd` にフォールバックする。
-    /// 旧 `swift-api-client` の挙動を踏襲。
+    /// Writes fractional-second ISO 8601, and on the way back accepts three shapes rather than one.
+    ///
+    /// Decoding tries ISO 8601 with fractional seconds, then without, then a bare `yyyy-MM-dd`
+    /// read at UTC — the spread of spellings that turn up across LLM and web APIs. It requires a
+    /// string, so a numeric timestamp is an error here. Carried over from `swift-api-client`.
     case llmAPIDefault
-    /// 完全にカスタムなブリッジング。
+    /// Supplies both directions yourself, for a format none of the others describes.
     case custom(
         encode: @Sendable (Date) -> StructuredValue,
         decode: @Sendable (StructuredValue) throws -> Date
     )
 
-    /// このストラテジーが `Date` の標準 `Codable` 処理を置き換えるかどうか。
+    /// Whether this strategy replaces the stock date conformance rather than deferring to it.
     public var interceptsDate: Bool {
         if case .deferredToDate = self { return false }
         return true

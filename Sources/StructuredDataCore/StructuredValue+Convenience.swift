@@ -1,12 +1,11 @@
 import Foundation
 
-/// 構築用ファクトリと Foundation ブリッジングのヘルパー。
+/// Factories for building values by hand, and a bridge to and from untyped Foundation graphs.
 ///
-/// `int`/`double` ファクトリにより、コールサイトで `StructuredNumber` を明示せずに数値を構築できる。
-/// ``anyValue`` は既存 API との相互運用のために JSONSerialization スタイルの `Any` グラフへブリッジする。
-///
-/// `object([String:_])` ファクトリは意図的に存在しない。`OrderedObject` 自体が `ExpressibleByDictionaryLiteral` のため
-/// `object(OrderedObject)` case と曖昧になる。辞書リテラルか `OrderedObject` を使うこと。
+/// The number factories exist so a call site can write a number without naming
+/// ``StructuredNumber``. There is deliberately no factory taking a `[String: StructuredValue]`:
+/// ``OrderedObject`` is already `ExpressibleByDictionaryLiteral`, so such an overload would be
+/// ambiguous with the object case. Write a dictionary literal or an ``OrderedObject`` instead.
 extension StructuredValue {
     public static func int(_ value: some BinaryInteger) -> StructuredValue {
         .number(StructuredNumber(unchecked: String(value)))
@@ -16,7 +15,12 @@ extension StructuredValue {
         .number(StructuredNumber(unchecked: String(value)))
     }
 
-    /// JSONSerialization 互換の `Any` 表現（`NSNull`/`Bool`/`Int`/`Double`/`String`/`[Any]`/`[String: Any]`）。
+    /// The same data as an untyped graph of Foundation types, for handing to an API that predates this one.
+    ///
+    /// Produces `NSNull`, `Bool`, `Int`, `Double`, `String`, `[Any]` and `[String: Any]`, the shapes
+    /// `JSONSerialization` yields. This is a lossy exit: a number that is not spelled as an `Int`
+    /// becomes a `Double`, so a large integer literal loses digits here even though the tree still
+    /// holds them, and repeated keys collapse.
     public var anyValue: Any {
         switch self {
         case .null: return NSNull()
@@ -29,7 +33,11 @@ extension StructuredValue {
         }
     }
 
-    /// JSONSerialization スタイルの `Any` グラフから値を構築する。
+    /// Builds a value from an untyped Foundation graph, mapping anything unrecognised to null.
+    ///
+    /// Numbers come in through `NSNumber`, whose own text is used, so an already-rounded `Double`
+    /// stays rounded. Boolean-valued `NSNumber` instances are distinguished from numeric ones.
+    /// Note that a type this does not know becomes null rather than an error.
     public init(anyValue: Any) {
         if anyValue is NSNull { self = .null; return }
         if let number = anyValue as? NSNumber {

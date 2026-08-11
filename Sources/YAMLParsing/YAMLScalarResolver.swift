@@ -1,10 +1,23 @@
 import StructuredDataCore
 
-/// YAML 1.2 Core スキーマを用いてプレイン（非クォート）スカラーを型付き値へ解決する。
+/// Decides what an unquoted scalar means under the YAML 1.2 Core schema, where far fewer words are booleans.
 ///
-/// YAML 1.1 と異なり Core では `yes/no/on/off` や `NO` は文字列として扱われ、「ノルウェー問題」が解消されている。
-/// Bool は `true`/`false`（大文字小文字不問）のみ。整数は `0o` 八進数と `0x` 十六進数をサポート。
-/// `~`、`null`、空文字列はヌルとして解釈する。
+/// Core is the schema that fixed the Norway problem: `yes`, `no`, `on`, `off` and `NO` are strings
+/// here, not booleans, so a country code stays a country code. Only quoting can change what a
+/// scalar means, and quoting always yields a string.
+///
+/// The exact resolution, in order:
+///
+/// - **Null** — the empty string, `~`, `null`, `Null`, `NULL`.
+/// - **Boolean** — `true`, `True`, `TRUE`, `false`, `False`, `FALSE`. These six spellings and no
+///   others: the match is not case-insensitive, so `tRue` is a string.
+/// - **Integer** — an optional sign then decimal digits, or a `0o` octal or `0x` hexadecimal body.
+///   The two radix forms are converted to decimal, so unlike every other number here their source
+///   spelling is not preserved. Leading zeros are preserved, which means `007` becomes a number
+///   whose text is not valid JSON. Digit separators are not understood, so `1_000` is a string.
+/// - **Float** — anything matching the JSON number grammar, kept verbatim. That grammar is
+///   narrower than YAML's, so `.inf`, `.nan`, `.5` and a signed `+1.5` all fall through to string.
+/// - **String** — everything else.
 enum YAMLScalarResolver {
     static func resolve(_ text: String) -> StructuredValue {
         switch text {

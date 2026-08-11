@@ -1,24 +1,29 @@
 import Foundation
 
-/// ``XMLElement`` ツリーをテキストへシリアライズし、コンテンツを正しくエスケープする。
+/// Writes an element tree back out as text, escaping content so that interpolated values cannot break the markup.
 ///
-/// テキストは `&`・`<`・`>` をエスケープし、属性値ではさらに `"` をエスケープする。
-/// 手書きのプロンプトビルダーで見落とされていたエスケープ処理を提供する。
+/// Escaping is the point: hand-rolled prompt builders routinely concatenate user text into tags and
+/// produce a document that no longer parses, or that closes a tag the caller never intended.
+/// Element text escapes `&`, `<` and `>`; attribute values escape those and `"`.
+///
+/// Two things pass through unescaped, because escaping them would change their meaning: CDATA
+/// content and comment text. A value containing `]]>` or `--` therefore still needs care.
+/// An element with no children is written in the self-closing form, so an empty pair of tags in
+/// the source does not survive verbatim.
 public struct XMLSerializer: Sendable {
-    /// シリアライズ動作を制御するオプション。
     public struct Options: Sendable {
-        /// インデントと改行を使って出力を整形するかどうか。
+        /// Whether to break lines and indent, which is on by default here.
         ///
-        /// `false` の場合は空白を一切付与せずにシリアライズする。
+        /// Only elements whose children include another element are broken across lines; an
+        /// element holding just text stays inline, so pretty printing never inserts whitespace
+        /// into content.
         public var prettyPrinted: Bool
-        /// `prettyPrinted` が `true` のとき、各ネストレベルに付与するインデント文字列。
+        /// The indent added per nesting level when pretty printing.
         public var indent: String
 
-        /// オプションを作成する。
-        ///
         /// - Parameters:
-        ///   - prettyPrinted: 整形出力を有効にするかどうか。デフォルトは `true`。
-        ///   - indent: 整形時のインデント文字列。デフォルトは半角スペース 2 つ。
+        ///   - prettyPrinted: Whether to break lines and indent. Defaults to true.
+        ///   - indent: The indent per level. Defaults to two spaces.
         public init(prettyPrinted: Bool = true, indent: String = "  ") {
             self.prettyPrinted = prettyPrinted
             self.indent = indent
@@ -31,20 +36,18 @@ public struct XMLSerializer: Sendable {
         self.options = options
     }
 
-    /// `XMLElement` ツリーを UTF-8 文字列へシリアライズする。
+    /// Serializes a tree to text, with no XML declaration written.
     ///
-    /// - Parameter element: シリアライズするルート要素。
-    /// - Returns: エスケープ済みの XML テキスト。
+    /// - Parameter element: The root element.
     public func string(from element: XMLElement) -> String {
         var output = ""
         write(element, depth: 0, into: &output)
         return output
     }
 
-    /// `XMLElement` ツリーを UTF-8 エンコード済みバイト列へシリアライズする。
+    /// Serializes a tree to UTF-8 bytes.
     ///
-    /// - Parameter element: シリアライズするルート要素。
-    /// - Returns: `string(from:)` の結果を `.utf8` でエンコードしたデータ。
+    /// - Parameter element: The root element.
     public func data(from element: XMLElement) -> Data {
         Data(string(from: element).utf8)
     }
@@ -87,7 +90,10 @@ public struct XMLSerializer: Sendable {
         output += "\n" + String(repeating: options.indent, count: depth)
     }
 
-    /// `&`・`<`・`>` をエスケープし、`text` を XML 要素コンテンツ内で安全にする。
+    /// Escapes the three characters that would otherwise be read as markup inside element content.
+    ///
+    /// Quotes are left alone, since they carry no meaning between tags. Use ``escapeAttribute(_:)``
+    /// for anything going inside a quoted attribute value.
     public static func escapeText(_ text: String) -> String {
         var result = ""
         result.reserveCapacity(text.count)
@@ -102,7 +108,9 @@ public struct XMLSerializer: Sendable {
         return result
     }
 
-    /// `&`・`<`・`>`・`"` をエスケープし、`text` をダブルクォートで囲まれた XML 属性値内で安全にする。
+    /// Escapes markup characters plus the double quote, for a value going inside double quotes.
+    ///
+    /// A single quote is not escaped, so this output is only safe within double-quoted attributes.
     public static func escapeAttribute(_ text: String) -> String {
         var result = escapeText(text)
         result = result.replacingOccurrences(of: "\"", with: "&quot;")

@@ -2,24 +2,28 @@
 
 # swift-structured-data
 
-外部システム由来の動的な構造化データ（JSON ほか）を、Swift の型システムへ安全に変換するレイヤー。
-「正しく読む」層と「型へ変換する」層を分離し、数値の精度や順序を失わずに `Codable` へ橋渡しする。
+外部システム由来の動的な JSON / YAML / XML を、Swift の型システムへ安全に渡すための層。
 
-設計の全体像は [DESIGN.md](./DESIGN.md) を参照。
+![Swift](https://img.shields.io/badge/Swift-6.2-orange.svg)
+![Platforms](https://img.shields.io/badge/Platforms-iOS%2017%20%7C%20macOS%2014%20%7C%20tvOS%2017%20%7C%20watchOS%2010%20%7C%20visionOS%201-blue.svg)
+![License](https://img.shields.io/badge/License-MIT-yellow.svg)
+
+Foundation の `JSONDecoder` は「正しく読む」ことと「型へ変換する」ことを 1 レイヤーで混ぜていて、
+積年の数値バグはそこから来ています。このパッケージは両者を分けます。パーサは何も失っていない中立の値を作り、
+共有の `Decoder` バックボーンが、要求されたときにだけその値を型へ変換します。
 
 ## 特徴
 
-- **任意精度を壊さない数値モデル** — JSON number を生の十進文字列で保持し、要求された型へ遅延変換
-- **規定プロトコル中心の依存設計** — 消費者は `any StructuredDecoding` を注入で受け、具象パーサに依存しない
-- **フォーマット非依存の単一バックボーン** — カスタム `Decoder`/`Encoder` を 1 度実装し全フォーマットで再利用
-- **探索アクセサ** — `value.user.name.string` の動的アクセスと、型安全な `decode(_:)` の二層
-- **寛容デコードをフィールド単位でオプトイン** — `@Default` / `@LossyArray` / `@LosslessValue`
-- **ストリーミング部分デコード** — LLM のトークン逐次出力から途中状態を抽出
-- **公式適合性スイートで検証** — nst/JSONTestSuite を同梱して `y_`/`n_`/`i_` を網羅
+- **数値の精度を壊さない** — JSON number は元の十進文字列のまま保持し、具体的な型に求められて初めて変換します
+- **消費者はプロトコルに依存する** — `any StructuredDecoding` を注入で受ければ、JSON から YAML への
+  差し替えは合成ルート 1 箇所の変更で済みます
+- **全フォーマットで単一のバックボーン** — カスタム `Decoder`/`Encoder` の実装は 1 つで、3 つのパーサが再利用します
+- **入口が 2 つある** — `value.user.name.string` の動的な探索と、型安全な `decode(_:)`
+- **寛容なデコードはフィールド単位のオプトイン** — `@Default` / `@LossyArray` / `@LosslessValue`
+- **ストリーミング部分デコード** — LLM のトークン逐次出力から途中の状態を取り出せます
+- **公式適合性スイートで検証済み** — `nst/JSONTestSuite` を同梱し、`y_` / `n_` / `i_` を網羅しています
 
-## 使い方
-
-### デコード / エンコード
+## クイックスタート
 
 ```swift
 import JSONParsing
@@ -27,85 +31,59 @@ import JSONParsing
 struct Config: Codable { var retries: Int; var hosts: [String] }
 
 let config = try JSONDecoder().decode(Config.self, from: data)
-let encoded = try JSONEncoder().encode(config)
 ```
 
-### 規定プロトコルへの注入（依存性逆転）
-
-```swift
-import StructuredDataCore   // ライブラリは Core にのみ依存
-
-struct APIClient {
-    let decoder: any StructuredDecoding
-    func parse<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
-        try decoder.decode(type, from: data)
-    }
-}
-
-// 合成ルート（アプリ）だけが具象を選ぶ
-let client = APIClient(decoder: JSONDecoder())
-```
-
-### 動的な探索
+形の分からないペイロードを探索します。欠損したパスは throw ではなく `nil` になります。
 
 ```swift
 let value = try JSONParser().parse(data)
 value.user.name.string          // String?
 value.items[0].id.int           // Int?
-value["count", as: Int.self]    // Int?
 ```
 
-### 寛容デコード
+崩れた入力を受けると決めたフィールドだけ、寛容にします。
 
 ```swift
 struct Settings: Codable {
     @DefaultFalse var verbose: Bool
-    @DefaultEmptyArray<String> var tags: [String]
-    @LossyArray var ids: [Int]          // 壊れた要素を捨てる
-    @LosslessValue var port: Int        // "8080" でも 8080 でも受ける
+    @LossyArray var ids: [Int]      // 壊れた要素だけ捨て、デコード全体は失敗させない
+    @LosslessValue var port: Int     // 8080 でも "8080" でも受ける
 }
 ```
 
-### ストリーミング
+## ドキュメント
+
+[**API リファレンスとガイド**](https://no-problem-dev.github.io/swift-structured-data/documentation/structureddatacore/) —
+[Getting Started](https://no-problem-dev.github.io/swift-structured-data/documentation/structureddatacore/gettingstarted/) と
+[Modules](https://no-problem-dev.github.io/swift-structured-data/documentation/structureddatacore/modules/) を含みます。
+各パーサが何を受け入れ何を拒むかは Modules にあります。
+
+設計の全体像は [DESIGN.md](./DESIGN.md) を参照してください。
+
+## 導入
 
 ```swift
-var parser = StreamingJSONParser()
-parser.consume(#"{"name":"Ad"#)
-parser.snapshot().name.string    // "Ad"
-parser.consume(#"a"}"#)
-parser.snapshot().name.string    // "Ada"
-```
-
-## インストール
-
-`Package.swift` に追加する。
-
-```swift
+// Package.swift
 dependencies: [
     .package(url: "https://github.com/no-problem-dev/swift-structured-data.git", from: "2.0.0"),
-],
+]
 ```
 
-次に必要なプロダクトを追加する。
+必要な product を足します。各フォーマットモジュールは `StructuredDataCore` に依存しています。
+`any StructuredDecoding` を注入するなど、その型を直接名指しするターゲットには明示的に足してください。
 
 ```swift
 .product(name: "StructuredDataCore", package: "swift-structured-data"),
-.product(name: "JSONParsing",         package: "swift-structured-data"),
-.product(name: "YAMLParsing",         package: "swift-structured-data"),
-.product(name: "XMLCoding",           package: "swift-structured-data"),
+.product(name: "JSONParsing",        package: "swift-structured-data"),
+.product(name: "YAMLParsing",        package: "swift-structured-data"),
+.product(name: "XMLCoding",          package: "swift-structured-data"),
 ```
 
-## モジュール
+## 動作環境
 
-| モジュール | 役割 |
-|---|---|
-| `StructuredDataCore` | 規定プロトコル・中立 DOM・`Decoder`/`Encoder` バックボーン・property wrapper |
-| `JSONParsing` | RFC 8259 パーサ／シリアライザ・ストリーミング |
-| `YAMLParsing` | YAML 1.2 Core サブセット（block/flow・block scalar・multi-doc・Norway 修正） |
-| `XMLCoding` | XML ツリー解析・宣言的ビルダー・正しいエスケープ |
-
-YAML はフルスペック（anchor/alias・tag・複合キー）未対応。実装状況とテスト計測は [DESIGN.md](./DESIGN.md) を参照。
+- iOS 17.0+ / macOS 14.0+ / tvOS 17.0+ / watchOS 10.0+ / visionOS 1.0+
+- Swift 6.2+
 
 ## ライセンス
 
-MIT
+MIT — [LICENSE](LICENSE) を参照してください。

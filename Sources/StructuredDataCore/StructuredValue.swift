@@ -1,7 +1,14 @@
-/// 全パーサが共有するフォーマット非依存の中間表現。
+/// The format-independent tree that every parser here produces and every decoder here consumes.
 ///
-/// ライブラリの共通通貨。全フォーマットパーサが `StructuredValue` を生成し、単一の `Decoder` ブリッジが任意の `Decodable` 型へ変換する。
-/// YAML タグ/アンカーや XML 属性/混在コンテンツのようにより豊かなモデルを持つフォーマットは、独自ノード型を保持したうえでこの型へ射影する。
+/// This is the library's common currency. Each format parser builds one of these, and a single
+/// `Decoder` bridge turns it into any `Decodable` type, so adding a format costs a parser and no
+/// `Codable` machinery. Numbers ride as ``StructuredNumber`` rather than `Double`, so a document
+/// can go in and come back out without silent rounding.
+///
+/// A format whose model is richer than this keeps its own node type instead of lowering into it.
+/// XML is the case in point: attributes, comments, CDATA and mixed content have no counterpart
+/// among these cases, so `XMLCoding` parses to `XMLElement` and stays there — there is no bridge
+/// from an XML tree to this type, and consequently no XML `Codable` support.
 @dynamicMemberLookup
 public enum StructuredValue: Sendable, Hashable {
     case null

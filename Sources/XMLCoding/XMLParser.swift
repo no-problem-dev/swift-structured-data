@@ -1,29 +1,47 @@
 import Foundation
 import StructuredDataCore
 
-/// 整形式 XML ドキュメントを ``XMLElement`` ツリーへ解析する。
+/// Reads a well-formed XML document into a tree, keeping the distinctions JSON has no room for.
 ///
-/// 要素、属性、テキスト、CDATA、コメント、処理命令、定義済み/数値エンティティ参照をカバーする。
-/// DTD バリデーションと名前空間解決は対象外（プレフィックスはそのまま保持）。
+/// Elements, attributes, text, CDATA and comments all survive as separate things, in document
+/// order, so mixed content round-trips. Attributes and child elements never merge: they live in
+/// separate collections on each element, which is why this parser produces its own tree rather than
+/// lowering into ``StructuredValue`` — and consequently there is no `Codable` support for XML here.
+///
+/// It covers the document body, not the declarations around it. Specifically unsupported:
+///
+/// - **DTDs.** A `<!DOCTYPE …>` declaration is not merely ignored, it is fatal — the prolog scan
+///   consumes the rest of the input looking for a terminator it will not find, and parsing then
+///   fails for want of a root element.
+/// - **Entities beyond the built-in five and numeric references.** Anything else, including one a
+///   DTD would have declared, throws rather than being passed through.
+/// - **Namespaces.** Nothing is resolved. A prefix stays part of the element or attribute name,
+///   and an `xmlns` declaration is an ordinary attribute.
+/// - **Validation of names.** Any run of characters that is not whitespace or markup is accepted as
+///   a name, so ill-formed names pass.
+///
+/// Processing instructions inside an element are skipped, and text is neither whitespace-normalised
+/// nor split — adjacent characters coalesce into one text node.
 public struct XMLDocumentParser: Sendable {
-    /// パーサを初期化する。
     public init() {}
 
-    /// UTF-8 でエンコードされたバイト列を解析し、``XMLElement`` ツリーを返す。
+    /// Parses UTF-8 bytes and returns the document's root element.
     ///
-    /// - Parameter data: UTF-8 エンコードの XML バイト列。
-    /// - Returns: ドキュメントのルート要素。
-    /// - Throws: バイト列が UTF-8 として無効な場合、または XML が整形式でない場合に ``ParseError`` を投げる。
+    /// - Parameter data: The XML document, which must be UTF-8; no other encoding is detected,
+    ///   including one named in an XML declaration.
+    /// - Throws: A parse error when the bytes are not valid UTF-8, or when the document is not
+    ///   well-formed.
     public func parse(_ data: Data) throws -> XMLElement {
         guard let text = String(data: data, encoding: .utf8) else { throw ParseError(.invalidUTF8) }
         return try parse(text)
     }
 
-    /// XML 文字列を解析し、``XMLElement`` ツリーを返す。
+    /// Parses a string and returns the document's root element.
     ///
-    /// - Parameter string: 解析する XML 文字列。
-    /// - Returns: ドキュメントのルート要素。
-    /// - Throws: XML が整形式でない場合、または不明なエンティティ参照が含まれる場合に ``ParseError`` を投げる。
+    /// - Parameter string: The XML document.
+    /// - Throws: A parse error when the document is not well-formed, when it names an entity that
+    ///   is not one of the five built-ins or a numeric reference, or when it carries a document
+    ///   type declaration.
     public func parse(_ string: String) throws -> XMLElement {
         var scanner = Scanner(chars: Array(string))
         return try scanner.parseDocument()

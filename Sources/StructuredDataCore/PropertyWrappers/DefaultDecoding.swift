@@ -1,12 +1,19 @@
-/// キーが欠損または null の場合のフォールバック値を提供するプロトコル。
+/// Supplies the value a field falls back to when the payload does not provide a usable one.
 public protocol DefaultValueProvider {
     associatedtype Value: Codable & Sendable
     static var defaultValue: Value { get }
 }
 
-/// キーが欠損または null の場合に個別プロパティへ適用するデフォルト値のプロパティラッパー。
+/// Substitutes a fallback for one field instead of failing, leaving the rest of the type strict.
 ///
-/// 許容をフィールド単位で宣言し、型の `init(from:)` に組み込まない設計のため、他の箇所では厳格なデコードが維持される。
+/// Declaring the tolerance per field, rather than writing an `init(from:)` for the whole type,
+/// keeps every other property's decoding as unforgiving as before.
+///
+/// The substitution is wider than a missing key: it covers an absent key, an explicit null, and a
+/// value of the wrong type entirely. All three are swallowed and none is reported, so a payload
+/// that has started sending a string where a number belongs will read as the default forever
+/// without anything indicating it. Use this where a plausible fallback exists, not to quieten a
+/// field you are unsure about.
 @propertyWrapper
 public struct Default<Provider: DefaultValueProvider>: Codable, Sendable {
     public var wrappedValue: Provider.Value
@@ -30,7 +37,10 @@ extension Default: Equatable where Provider.Value: Equatable {}
 extension Default: Hashable where Provider.Value: Hashable {}
 
 public extension KeyedDecodingContainer {
-    /// 欠損キーをスローせずにプロバイダのデフォルト値で解決する。
+    /// Resolves a wholly absent key to the provider's value, which the wrapper alone cannot do.
+    ///
+    /// Without this overload the synthesized `init(from:)` would throw on a missing key before the
+    /// wrapper was ever constructed.
     func decode<Provider>(_ type: Default<Provider>.Type, forKey key: Key) throws -> Default<Provider> {
         try decodeIfPresent(type, forKey: key) ?? Default(wrappedValue: Provider.defaultValue)
     }

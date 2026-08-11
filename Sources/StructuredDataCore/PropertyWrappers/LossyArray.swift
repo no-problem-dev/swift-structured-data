@@ -1,6 +1,12 @@
-/// 配列を要素ごとにデコードし、デコードに失敗したエントリを破棄するプロパティラッパー。
+/// Decodes an array element by element and drops the ones that fail, rather than losing the whole payload.
 ///
-/// API レスポンスの 1 件の不正要素でペイロード全体を棄却したくない場合に有用。エンコードは透過的。
+/// For a response where one malformed entry should not cost you the other ninety-nine. Encoding is
+/// unaffected and writes every element.
+///
+/// Each element's failure is swallowed, so the result is shorter than the source with nothing
+/// saying so — the count is not evidence of how many entries were sent. The array itself is still
+/// strict: a value that is not an array throws. A missing key or an explicit null gives an empty
+/// array.
 @propertyWrapper
 public struct LossyArray<Element: Codable & Sendable>: Codable, Sendable {
     public var wrappedValue: [Element]

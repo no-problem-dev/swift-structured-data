@@ -1,54 +1,55 @@
 # ``StructuredDataCore``
 
-フォーマット非依存の構造化データ中間表現と、JSON・YAML・XML ターゲットが共有する Codable ブリッジ。
+A format-independent representation for structured data, and the decoding bridge every format target shares.
 
 ## Overview
 
-`StructuredDataCore` は全フォーマットパーサが収束する中間表現 ``StructuredValue`` を定義する。このパッケージの全モジュール（`JSONParsing`、`YAMLParsing`、`XMLCoding`）は `StructuredValue` を生成または消費し、`StructuredDataCore` が持つ単一のデコードバックボーンが任意の `Decodable` 型へ変換する。コールサイトで JSON を YAML へ差し替えるには import を 1 行変えるだけでよい。
+`StructuredDataCore` defines ``StructuredValue``, the intermediate representation that every parser in this package converges on. The `JSONParsing` and `YAMLParsing` modules produce and consume `StructuredValue`, and a single decoding backbone in `StructuredDataCore` turns it into any `Decodable` type. Swapping JSON for YAML at a call site is a one-line import change.
 
 ```swift
 import StructuredDataCore
 import JSONParsing
 
-// JSON を中立表現へ解析する
+// Parse JSON into the neutral representation.
 let value = try JSONParser().parse(jsonData)
 
-// 値を直接取り出す
-let name: String? = value.user.name.string          // 動的メンバーアクセス
-let age: Int? = value.int("age")                    // キーベースの型付きアクセサ
+// Read values directly.
+let name: String? = value.user.name.string   // dynamic member lookup
+let age: Int? = value.int("age")             // typed key-based accessor
 
-// 共有ブリッジ経由で Codable 型へデコードする
+// Decode into a Codable type through the shared bridge.
 struct User: Decodable { var name: String; var age: Int }
 let user = try value.decode(User.self)
 ```
 
-アーキテクチャは 2 層に分かれている。
+The architecture has two layers.
 
-- **Layer 1 — 解析**: 各フォーマットターゲットが ``DataParser`` を実装し、`Codable` 型変換を一切行わずに `StructuredValue` を生成する。
-- **Layer 2 — デコード**: ``StructuredDecoder`` が `DataParser` と共有デコードバックボーンを合成し、``StructuredDecoding`` プロトコルとしてコールサイトへフォーマット非依存の窓口を提供する。
+- **Layer 1 — parsing**: a format target implements ``DataParser`` and produces a `StructuredValue` without performing any `Codable` conversion.
+- **Layer 2 — decoding**: ``StructuredDecoder`` composes a `DataParser` with the shared decoding backbone and exposes a format-independent entry point to call sites as the ``StructuredDecoding`` protocol.
 
 ```swift
-// フォーマット非依存のデコード — JSONDecoder を YAMLDecoder に差し替えても他は変わらない
+// Format-independent decoding — substituting YAMLDecoder for JSONDecoder changes nothing else.
 func load<T: Decodable>(_ type: T.Type, from data: Data, using decoder: any StructuredDecoding) throws -> T {
     try decoder.decode(type, from: data)
 }
 ```
 
-4 モジュールの責務は以下のとおり。`StructuredDataCore` は中立の中間表現と `Codable` ブリッジを持ち、他の 3 モジュールが唯一共有する依存先。`JSONParsing` は通常の REST/LLM ペイロード向け `JSONDecoder`・`JSONEncoder`、直接 `StructuredValue` を扱う `JSONParser`、トークン単位の LLM 出力向け `StreamingJSONParser` を提供する。`YAMLParsing` は `YAMLDecoder` と `YAMLParser` で YAML 1.2 Core スキーマドキュメントを扱い、ラウンドトリップ用の `YAMLSerializer` も持つ。`XMLCoding` は異なるアプローチをとり、XML を `StructuredValue` へ平坦化するのではなく、`XMLDocumentParser`・`XMLElement`・`XMLBuilder` を通じて要素・属性・混在コンテンツ・CDATA を含む完全な XML ツリーを保持する。
+The four modules divide as follows. `StructuredDataCore` holds the neutral representation and the `Codable` bridge, and is the only dependency the other three share. `JSONParsing` provides `JSONDecoder` and `JSONEncoder` for ordinary REST and LLM payloads, `JSONParser` for working with `StructuredValue` directly, and `StreamingJSONParser` for token-by-token LLM output. `YAMLParsing` handles YAML documents with `YAMLDecoder` and `YAMLParser`, resolving plain scalars with the YAML 1.2 Core schema, and adds `YAMLSerializer` for round-tripping. `XMLCoding` takes a deliberately different route: rather than flattening XML into a `StructuredValue`, it preserves the full XML tree — elements, attributes, mixed content, and CDATA — through `XMLDocumentParser`, `XMLElement`, and `XMLBuilder`, and stands apart from the `Codable` bridge entirely.
 
 ## Topics
 
-### 導入
+### Essentials
 
 - <doc:GettingStarted>
+- <doc:Modules>
 
-### 中間表現
+### Intermediate Representation
 
 - ``StructuredValue``
 - ``StructuredNumber``
 - ``OrderedObject``
 
-### 解析・シリアライズのプロトコル
+### Parsing and Serialization Protocols
 
 - ``DataParser``
 - ``DataSerializer``
@@ -57,22 +58,30 @@ func load<T: Decodable>(_ type: T.Type, from data: Data, using decoder: any Stru
 - ``StructuredDecoder``
 - ``StructuredEncoder``
 
-### オプションと設定
+### Options and Configuration
 
 - ``DecodingOptions``
 - ``EncodingOptions``
 - ``DateCodingStrategy``
 - ``DuplicateKeyPolicy``
 
-### エラー処理
+### Error Handling
 
 - ``ParseError``
 - ``SourceLocation``
 
-### プロパティラッパー
+### Property Wrappers
 
 - ``Default``
 - ``DefaultValueProvider``
 - ``DefaultProviders``
 - ``LosslessValue``
 - ``LossyArray``
+
+### Default Value Shorthands
+
+- ``DefaultFalse``
+- ``DefaultTrue``
+- ``DefaultZero``
+- ``DefaultEmptyString``
+- ``DefaultEmptyArray``

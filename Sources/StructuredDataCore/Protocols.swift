@@ -1,26 +1,28 @@
 import Foundation
 
-/// 生バイトを中立の中間表現へ解析するプロトコル。
+/// Reads raw bytes into the shared tree, doing no conversion to Swift types.
 ///
-/// フォーマットごと（JSON、YAML、XML）に実装する。Layer 1 — ロスレス解析として、フォーマットの公式適合スイートで検証する。ユーザー型への型変換は行わない。
+/// One conformance per format. The contract is lossless parsing measured against that format's
+/// own conformance suite, which is why numbers stay as text at this stage.
 public protocol DataParser: Sendable {
     func parse(_ data: Data) throws -> StructuredValue
 }
 
-/// 中立の中間表現をバイト列へシリアライズするプロトコル。
+/// Writes the shared tree back out as bytes.
 public protocol DataSerializer: Sendable {
     func serialize(_ value: StructuredValue) throws -> Data
 }
 
-/// 消費者向けデコードの抽象プロトコル。
+/// Decoding with the format left out, so a call site can be handed one without naming it.
 ///
-/// 消費者はこの抽象に依存し、具象デコーダを注入で受け取る。ライブラリが特定フォーマットターゲットを import することなく動作する。
-/// `any` 存在型として使えるよう入力を `Data` に固定している。
+/// Depend on this and take the concrete decoder by injection; a library then needs no import of
+/// any format target. Input is fixed to `Data` rather than made generic so the protocol can be
+/// used as an `any` existential.
 public protocol StructuredDecoding: Sendable {
     func decode<T: Decodable>(_ type: T.Type, from data: Data) throws -> T
 }
 
-/// 消費者向けエンコードの抽象プロトコル。
+/// Encoding with the format left out, the counterpart used the same way.
 public protocol StructuredEncoding: Sendable {
     func encode<T: Encodable>(_ value: T) throws -> Data
 }

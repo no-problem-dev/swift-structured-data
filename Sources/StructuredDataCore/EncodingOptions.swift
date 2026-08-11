@@ -1,6 +1,10 @@
-/// `Encodable` 値を `StructuredValue` へ変換する際のチューニングオプション。
+/// How Swift values are turned into a tree: key naming and date handling.
 public struct EncodingOptions: Sendable {
-    /// Swift プロパティ名をペイロードのオブジェクトキーへマップする戦略。
+    /// How to rewrite Swift property names into the document's key names.
+    ///
+    /// The conversions insert a separator before every uppercase character and lowercase it, with
+    /// no notion of an acronym: `userID` becomes `user_i_d`, not `user_id`. Supply a custom
+    /// transform when the wire format's spelling matters.
     public enum KeyStrategy: Sendable {
         case useDefaultKeys
         case convertToSnakeCase

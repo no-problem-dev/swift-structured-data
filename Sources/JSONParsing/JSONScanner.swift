@@ -1,10 +1,22 @@
 import Foundation
 import StructuredDataCore
 
-/// UTF-8 バイト列を直接操作する再帰下降型の RFC 8259 パーサ。
+/// A recursive-descent RFC 8259 parser working straight over UTF-8 bytes.
 ///
-/// Layer 1 専用。構造を検証し数値をテキストとして保持する。ユーザー型への型変換はここでは行わない。
-/// 挙動は `nst/JSONTestSuite`（`y_` 受理・`n_` 拒否）で固定されている。
+/// Validates structure and keeps numbers as text; converting to a Swift type happens later.
+/// The accept/reject boundary is pinned by the `nst/JSONTestSuite` corpus, whose `y_` files must
+/// parse and whose `n_` files must fail.
+///
+/// It rejects everything outside the grammar and adds nothing to it. Trailing commas, comments,
+/// single-quoted strings, unquoted keys, `NaN`, `Infinity`, a leading `+`, `.5`, `5.`, `01` and a
+/// UTF-8 byte-order mark are all errors. Bytes after the top-level value are an error too. A
+/// top-level scalar is fine — RFC 8259 dropped the object-or-array restriction. Repeated keys are
+/// the one genuinely implementation-defined case and are settled by the parsing options.
+///
+/// Two places substitute rather than fail, matching what the test suite's `i_` files leave open:
+/// an escape naming an unpaired surrogate becomes U+FFFD, and a valid surrogate pair is combined
+/// into the astral character it denotes. Raw bytes inside a string are only checked for UTF-8
+/// validity once the closing quote is reached.
 struct JSONScanner {
     private let bytes: [UInt8]
     private var index: Int

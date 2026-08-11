@@ -1,21 +1,25 @@
 import Foundation
 
 extension StructuredValue {
-    /// 共有バックボーンを経由してこの値を具体的な `Decodable` 型へデコードする。
+    /// Decodes this subtree into a concrete type, reporting a mismatch instead of swallowing it.
+    ///
+    /// This is the strict counterpart to the exploratory accessors: where those give nil for
+    /// anything unexpected, this throws a `DecodingError` naming the coding path.
     public func decode<T: Decodable>(_ type: T.Type, options: DecodingOptions = .init()) throws -> T {
         try decodeScalar(type, options: options, codingPath: [])
     }
 
-    /// 任意の `Encodable` から値を構築する。
+    /// Builds a tree from any encodable value, without going through a serialized form.
     public static func encoded<T: Encodable>(_ value: T, options: EncodingOptions = .init()) throws -> StructuredValue {
         try options.lower(value, codingPath: [])
     }
 }
 
-/// ``DataParser`` を消費者向け ``StructuredDecoding`` プロトコルへ適合させるアダプター。
+/// Pairs any parser with the shared decoding backbone to get a full decoder.
 ///
-/// フォーマットターゲットはこの上に薄いデコーダを公開する。解析ステップ（Layer 1）とデコードステップ（Layer 2）が、
-/// フォーマットごとに `Decoder` 機構を再実装することなく合成される。
+/// This is how a format target exposes a decoder without reimplementing `Decoder` machinery:
+/// supply a parser, and parsing and decoding compose into one type. ``parse(_:)`` remains
+/// available for the times you want the tree rather than a Swift type.
 public struct StructuredDecoder<Parser: DataParser>: StructuredDecoding {
     public let parser: Parser
     public var options: DecodingOptions
@@ -34,7 +38,7 @@ public struct StructuredDecoder<Parser: DataParser>: StructuredDecoding {
     }
 }
 
-/// ``DataSerializer`` を消費者向け ``StructuredEncoding`` プロトコルへ適合させるアダプター。
+/// Pairs any serializer with the shared encoding backbone to get a full encoder.
 public struct StructuredEncoder<Serializer: DataSerializer>: StructuredEncoding {
     public let serializer: Serializer
     public var options: EncodingOptions

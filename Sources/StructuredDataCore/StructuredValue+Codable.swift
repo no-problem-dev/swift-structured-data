@@ -1,5 +1,12 @@
-/// `Codable` 準拠により、`StructuredValue` を他の Codable 型に埋め込み Foundation を含む任意のエンコーダ/デコーダでラウンドトリップできる。
-/// ライブラリ独自パーサは数値精度を保持するが、このパスはホストのコーダーが対応する範囲に従う。
+/// Lets a dynamic subtree sit inside an otherwise statically typed model, encoded by any coder.
+///
+/// This is the conformance that makes a field of unknown shape workable: declare it as a
+/// ``StructuredValue`` and the surrounding type stays `Codable`, whichever encoder is driving.
+///
+/// Precision here is the host coder's, not this library's. Decoding through Foundation's JSON
+/// decoder tries `Int64`, then `UInt64`, then `Double`, so a value that fits none of them arrives
+/// already rounded, and the exact source digits this library normally preserves are gone before
+/// this code sees them. Route through the parsers in this package when the digits matter.
 extension StructuredValue: Codable {
     public init(from decoder: Decoder) throws {
         if var unkeyed = try? decoder.unkeyedContainer() {

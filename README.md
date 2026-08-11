@@ -2,24 +2,32 @@ English | [日本語](./README.ja.md)
 
 # swift-structured-data
 
-A safe bridge that converts dynamic structured data from external systems (JSON and more) into Swift's type system.
-Separates the "parse correctly" layer from the "convert to types" layer, bridging to `Codable` without losing numeric precision or ordering.
+A safe bridge from dynamic JSON, YAML, and XML into Swift's type system.
 
-For the full design rationale, see [DESIGN.md](./DESIGN.md).
+![Swift](https://img.shields.io/badge/Swift-6.2-orange.svg)
+![Platforms](https://img.shields.io/badge/Platforms-iOS%2017%20%7C%20macOS%2014%20%7C%20tvOS%2017%20%7C%20watchOS%2010%20%7C%20visionOS%201-blue.svg)
+![License](https://img.shields.io/badge/License-MIT-yellow.svg)
+
+Foundation's `JSONDecoder` mixes parsing with type conversion in a single layer, which is where its
+long-standing numeric bugs come from. This package separates the two: a parser produces a neutral
+value that has lost nothing, and a shared `Decoder` backbone converts that value to your type on
+demand.
 
 ## Features
 
-- **Precision-preserving number model** — JSON numbers are kept as raw decimal text and converted lazily to the requested type
-- **Protocol-centric dependency design** — consumers inject `any StructuredDecoding` and never depend on a concrete parser
-- **Single backbone for all formats** — one custom `Decoder`/`Encoder` implementation, reused across every format
-- **Two-tier access** — dynamic `value.user.name.string` exploration alongside type-safe `decode(_:)`
-- **Opt-in tolerant decoding per field** — `@Default` / `@LossyArray` / `@LosslessValue`
-- **Streaming partial decode** — extract in-progress state from an LLM token-by-token output
-- **Verified against the official conformance suite** — `nst/JSONTestSuite` bundled, covering `y_` / `n_` / `i_` cases
+- **Numbers keep their precision** — a JSON number is held as its original decimal text and
+  converted only when a concrete type asks for it
+- **Consumers depend on a protocol** — inject `any StructuredDecoding` and swapping JSON for YAML is
+  a change at the composition root, not at every call site
+- **One backbone for every format** — a single custom `Decoder`/`Encoder` implementation, reused by
+  all three parsers
+- **Two ways in** — dynamic exploration with `value.user.name.string`, or type-safe `decode(_:)`
+- **Tolerant decoding is opt-in, per field** — `@Default`, `@LossyArray`, `@LosslessValue`
+- **Streaming partial decode** — read in-progress state out of a token-by-token LLM response
+- **Checked against the official conformance suite** — `nst/JSONTestSuite` is bundled, covering the
+  `y_`, `n_`, and `i_` cases
 
-## Usage
-
-### Decode / Encode
+## Quick Start
 
 ```swift
 import JSONParsing
@@ -27,85 +35,59 @@ import JSONParsing
 struct Config: Codable { var retries: Int; var hosts: [String] }
 
 let config = try JSONDecoder().decode(Config.self, from: data)
-let encoded = try JSONEncoder().encode(config)
 ```
 
-### Inject a protocol (dependency inversion)
-
-```swift
-import StructuredDataCore   // library depends only on Core
-
-struct APIClient {
-    let decoder: any StructuredDecoding
-    func parse<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
-        try decoder.decode(type, from: data)
-    }
-}
-
-// Only the composition root (app) picks the concrete type
-let client = APIClient(decoder: JSONDecoder())
-```
-
-### Dynamic exploration
+Explore a payload whose shape you do not know yet — missing paths yield `nil` rather than throwing:
 
 ```swift
 let value = try JSONParser().parse(data)
 value.user.name.string          // String?
 value.items[0].id.int           // Int?
-value["count", as: Int.self]    // Int?
 ```
 
-### Tolerant decoding
+Or accept messy input on the fields where you have decided to:
 
 ```swift
 struct Settings: Codable {
     @DefaultFalse var verbose: Bool
-    @DefaultEmptyArray<String> var tags: [String]
-    @LossyArray var ids: [Int]          // discard malformed elements
-    @LosslessValue var port: Int        // accepts "8080" or 8080
+    @LossyArray var ids: [Int]      // drop malformed elements instead of failing the whole decode
+    @LosslessValue var port: Int     // accepts "8080" as well as 8080
 }
 ```
 
-### Streaming
+## Documentation
 
-```swift
-var parser = StreamingJSONParser()
-parser.consume(#"{"name":"Ad"#)
-parser.snapshot().name.string    // "Ad"
-parser.consume(#"a"}"#)
-parser.snapshot().name.string    // "Ada"
-```
+[**API reference and guides**](https://no-problem-dev.github.io/swift-structured-data/documentation/structureddatacore/) —
+including [Getting Started](https://no-problem-dev.github.io/swift-structured-data/documentation/structureddatacore/gettingstarted/)
+and [Modules](https://no-problem-dev.github.io/swift-structured-data/documentation/structureddatacore/modules/),
+which covers what each parser accepts and rejects.
+
+The design rationale, in Japanese, is in [DESIGN.md](./DESIGN.md).
 
 ## Installation
 
-Add the package to your `Package.swift`:
-
 ```swift
+// Package.swift
 dependencies: [
     .package(url: "https://github.com/no-problem-dev/swift-structured-data.git", from: "2.0.0"),
-],
+]
 ```
 
-Then add the products you need:
+Add the products you need. Each format module depends on `StructuredDataCore`; add it explicitly to
+any target that names its types directly, such as one that injects `any StructuredDecoding`:
 
 ```swift
 .product(name: "StructuredDataCore", package: "swift-structured-data"),
-.product(name: "JSONParsing",         package: "swift-structured-data"),
-.product(name: "YAMLParsing",         package: "swift-structured-data"),
-.product(name: "XMLCoding",           package: "swift-structured-data"),
+.product(name: "JSONParsing",        package: "swift-structured-data"),
+.product(name: "YAMLParsing",        package: "swift-structured-data"),
+.product(name: "XMLCoding",          package: "swift-structured-data"),
 ```
 
-## Modules
+## Requirements
 
-| Module | Role |
-|---|---|
-| `StructuredDataCore` | Protocols, neutral DOM, `Decoder`/`Encoder` backbone, property wrappers |
-| `JSONParsing` | RFC 8259 parser/serializer, streaming |
-| `YAMLParsing` | YAML 1.2 Core subset (block/flow, block scalars, multi-doc, Norway fix) |
-| `XMLCoding` | XML tree parsing, declarative builder, correct escaping |
-
-YAML does not support the full spec (anchors/aliases, tags, complex keys). For implementation status and test coverage see [DESIGN.md](./DESIGN.md).
+- iOS 17.0+ / macOS 14.0+ / tvOS 17.0+ / watchOS 10.0+ / visionOS 1.0+
+- Swift 6.2+
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).
