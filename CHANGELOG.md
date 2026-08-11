@@ -4,7 +4,7 @@
 
 ### Changed
 
-- YAML constructs this parser does not model now throw instead of being silently dropped.
+- **BREAKING** — YAML constructs this parser does not model now throw instead of being silently dropped.
   Tags, anchors, aliases, complex keys, and a `%YAML` directive for anything other than 1.2
   previously produced a value that was not in the document — `!!str 42` came back as the
   number 42, and an alias came back as null. Returning an invented value is worse than
