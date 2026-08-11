@@ -6,9 +6,12 @@
 /// negative one requested as unsigned; every such case throws `dataCorrupted`, naming the number
 /// and the type. Only ``StructuredValue/int(_:)`` and ``StructuredNumber/coercedInt`` truncate.
 ///
-/// Floating-point reads never fail. A magnitude past the target type's range becomes infinity
-/// silently, so a document holding `1e400` decodes to an infinite `Double`, and any `Double`
-/// beyond `Float`'s range becomes an infinite `Float`.
+/// Floating-point reads fail on the same terms. A magnitude past the target type's range has no
+/// nearest representable value, so `1e400` as a `Double` and `1e300` as a `Float` throw
+/// `dataCorrupted` rather than arriving as infinity. Rounding is a different matter and still
+/// happens quietly: `0.1` is not exactly representable, `1e-400` reads as zero, and everything
+/// past 17 significant digits is gone — in each case the value returned is the nearest one there
+/// is, which is what asking for a `Double` means.
 ///
 /// Nothing else converts: a string is not read as a number, and a number is not read as a string.
 struct SingleValueContainer: SingleValueDecodingContainer {
@@ -28,8 +31,8 @@ struct SingleValueContainer: SingleValueDecodingContainer {
         return string
     }
 
-    func decode(_ type: Double.Type) throws -> Double { try floating(type) { $0.double } }
-    func decode(_ type: Float.Type) throws -> Float { try floating(type) { Float($0.double) } }
+    func decode(_ type: Double.Type) throws -> Double { try floating(type) { $0.exactDouble } }
+    func decode(_ type: Float.Type) throws -> Float { try floating(type) { $0.exactFloat } }
 
     func decode(_ type: Int.Type) throws -> Int { try integer(type) }
     func decode(_ type: Int8.Type) throws -> Int8 { try integer(type) }
@@ -56,9 +59,14 @@ struct SingleValueContainer: SingleValueDecodingContainer {
         return result
     }
 
-    private func floating<T>(_ type: T.Type, _ convert: (StructuredNumber) -> T) throws -> T {
+    private func floating<T>(_ type: T.Type, _ convert: (StructuredNumber) -> T?) throws -> T {
         guard case .number(let number) = value else { throw mismatch(type) }
-        return convert(number)
+        guard let result = convert(number) else {
+            throw DecodingError.dataCorrupted(
+                .init(codingPath: codingPath, debugDescription: "Number \(number.text) does not fit in \(type).")
+            )
+        }
+        return result
     }
 
     private func mismatch(_ expected: Any.Type) -> DecodingError {

@@ -36,7 +36,9 @@ let documents: [StructuredValue] = try YAMLParser().parseAll(yamlData)
 
 The parser covers the JSON-superset subset of the syntax that most external systems emit: block and flow mappings and sequences; plain, single-quoted, double-quoted, literal, and folded scalars; comments; and multi-document streams. Plain scalars are resolved with the YAML 1.2 Core schema, which — unlike YAML 1.1 — leaves `yes`, `no`, `on`, and `off` as strings, so a country code of `NO` stays the string `"NO"`.
 
-Constructs outside that subset are not resolved. Tag (`!`, `!!`), anchor (`&name`), and alias (`*name`) properties are stripped from the front of a node, and whatever text remains is parsed on its own: `!!str 7` therefore yields the number `7`, and an alias with nothing after it resolves to null rather than to the anchored value. Complex keys introduced by `?` are not recognized and fall through as plain scalars. Reach for a full YAML implementation if your documents rely on any of these.
+Constructs outside that subset throw `ParseError` with a kind of `unsupportedConstruct`, naming what was found. That covers tag (`!`, `!!`), anchor (`&name`), and alias (`*name`) properties in both block and flow context, complex keys introduced by `?`, `%TAG` directives, and `%YAML` directives naming a version other than 1.2. They used to be stripped, with whatever text remained parsed on its own — so `!!str 7` yielded the number `7` and an alias yielded null. Refusing is the honest answer: an alias names a value stated elsewhere in the document, and null is not it. Reach for a full YAML implementation if your documents rely on any of these.
+
+Two gaps are not refused, because neither is distinguishable from ordinary content: a tab used as indentation is not counted, so such a line lands in the wrong parent, and a repeated key is kept rather than resolved.
 
 ``YAMLSerializer`` handles the reverse direction. It emits non-empty collections in block style and empty ones in flow style, and quotes any scalar that would not resolve back to the same value — so a string like `"1.0"` survives as a string. Over that same Core subset, `parse(serialize(v)) == v`.
 

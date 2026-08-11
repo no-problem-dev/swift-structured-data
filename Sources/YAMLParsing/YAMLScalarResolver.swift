@@ -10,7 +10,10 @@ import StructuredDataCore
 ///
 /// - **Null** — the empty string, `~`, `null`, `Null`, `NULL`.
 /// - **Boolean** — `true`, `True`, `TRUE`, `false`, `False`, `FALSE`. These six spellings and no
-///   others: the match is not case-insensitive, so `tRue` is a string.
+///   others: the match is not case-insensitive, so `tRue` is a string. That is not a shortcut —
+///   it is the Core schema's boolean rule exactly, which admits lowercase, capitalised and
+///   uppercase and nothing between. Widening it would put this back on the 1.1 side of the same
+///   line that makes `no` a string here.
 /// - **Integer** — an optional sign then decimal digits, or a `0o` octal or `0x` hexadecimal body.
 ///   The two radix forms are converted to decimal, so unlike every other number here their source
 ///   spelling is not preserved. Leading zeros are preserved, which means `007` becomes a number

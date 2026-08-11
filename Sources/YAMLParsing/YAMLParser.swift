@@ -8,21 +8,31 @@ import StructuredDataCore
 /// scalars with their chomping and explicit-indent indicators, comments, and multi-document
 /// streams split on `---`.
 ///
-/// What it does not handle matters more, because none of it is an error — each is quietly
-/// discarded, so a document using these features parses into something wrong instead of failing:
+/// What it does not handle is **refused, not guessed at**. Each of these throws a `ParseError`
+/// whose kind is `unsupportedConstruct`, because the alternative is handing back a value the
+/// document does not say — `!!str 42` as the number 42, an alias as null — with nothing to
+/// indicate it:
 ///
-/// - **Anchors and aliases.** Both are stripped as text. An anchor's value survives, but an alias
-///   referring to it decodes as null; nothing is ever substituted for it.
-/// - **Tags.** Stripped, so `!!str 42` resolves as the number 42 rather than the string.
-/// - **Complex keys.** A `?` line is read as an ordinary plain scalar.
-/// - **Directives.** `%YAML` and `%TAG` lines are skipped without being applied.
-/// - **Tabs as indentation.** Only spaces are counted, so a tab-indented line reads as
-///   column zero and lands in the wrong parent.
-/// - **Repeated keys.** Always all kept, with no policy applied.
+/// - **Tags** (`!`, `!!`, `!<…>`), **anchors** (`&name`) and **aliases** (`*name`), in block and
+///   flow context alike. An anchor's own value would survive, but accepting the definition of a
+///   name that nothing may then refer to is not worth the exception.
+/// - **Complex keys** — a `?` line.
+/// - **`%TAG` directives**, which declare shorthands that would go unapplied, and **`%YAML`
+///   directives naming any version other than 1.2**, since scalars here resolve under 1.2 Core
+///   and 1.1 would make `no` a boolean. `%YAML 1.2` itself agrees with what this does and passes.
 ///
-/// Malformed input is mostly not rejected either: against the official YAML test suite this
-/// accepts the majority of documents that a conforming parser is required to reject. Treat it as a
-/// reader for input you control, not as a validator.
+/// Two gaps are not refused, because neither can be told from ordinary content:
+///
+/// - **Tabs as indentation.** Only spaces are counted, so a tab-indented line reads as column
+///   zero and lands in the wrong parent.
+/// - **Repeated keys.** All are kept, with no policy applied.
+///
+/// Directives, `---` and `...` are recognised line by line, before any block structure is worked
+/// out, so a line inside a block scalar that begins with one of them is taken for the real thing.
+///
+/// Being loud about the unimplemented is not the same as validating: this still accepts plenty of
+/// input that a conforming parser must reject, so it remains a reader for documents you control.
+/// The exact rate is measured against the official YAML test suite in `ConformanceTests`.
 ///
 /// ``parse(_:)`` returns the first document of a stream and silently discards the rest; use
 /// ``parseAll(_:)`` when there may be more than one.
@@ -45,14 +55,14 @@ public struct YAMLParser: DataParser {
     public func parseAll(_ data: Data) throws -> [StructuredValue] {
         guard let text = String(data: data, encoding: .utf8) else { throw ParseError(.invalidUTF8) }
         var documents: [StructuredValue] = []
-        for lines in YAMLParser.splitDocuments(text) {
+        for lines in try YAMLParser.splitDocuments(text) {
             var parser = BlockParser(lines: lines)
             documents.append(try parser.parseRoot())
         }
         return documents
     }
 
-    private static func splitDocuments(_ text: String) -> [[String]] {
+    private static func splitDocuments(_ text: String) throws -> [[String]] {
         var documents: [[String]] = []
         var current: [String] = []
         var sawContent = false
@@ -63,7 +73,10 @@ public struct YAMLParser: DataParser {
         }
         for rawLine in text.split(separator: "\n", omittingEmptySubsequences: false) {
             let line = String(rawLine.hasSuffix("\r") ? rawLine.dropLast() : rawLine)
-            if line.hasPrefix("%") { continue }
+            if line.hasPrefix("%") {
+                try checkDirective(line)
+                continue
+            }
             if line == "---" || line.hasPrefix("--- ") || line.hasPrefix("---\t") {
                 flush()
                 let remainder = line.count > 3 ? "   " + line.dropFirst(3) : ""
@@ -82,6 +95,28 @@ public struct YAMLParser: DataParser {
         }
         flush()
         return documents.isEmpty ? [[]] : documents
+    }
+
+    /// Lets through only the directives that change nothing about how this reads a document.
+    ///
+    /// `%TAG` declares a shorthand that later nodes use; skipping it would leave those nodes
+    /// meaning something else. `%YAML` names the version whose schema resolves the scalars, and
+    /// under 1.1 `no` is a boolean rather than the country — the Norway problem, which the whole
+    /// Core schema exists to avoid. Only `%YAML 1.2`, which says what this already does, passes.
+    ///
+    /// Anything else beginning with `%` is a reserved directive, which the spec says to ignore.
+    private static func checkDirective(_ line: String) throws {
+        let fields = line.split(separator: " ", omittingEmptySubsequences: true)
+        guard let name = fields.first else { return }
+        if name == "%TAG" {
+            throw ParseError(.unsupportedConstruct("%TAG directive"))
+        }
+        if name == "%YAML" {
+            let version = fields.count > 1 ? String(fields[1]) : ""
+            guard version == "1.2" else {
+                throw ParseError(.unsupportedConstruct("%YAML directive naming version '\(version)'"))
+            }
+        }
     }
 }
 
@@ -102,6 +137,7 @@ private struct BlockParser {
         skipIgnorable()
         guard let line = peek(), indentOf(line) >= indent else { return .null }
         let body = content(line)
+        try rejectComplexKey(body)
         if body == "-" || body.hasPrefix("- ") || body.hasPrefix("-\t") {
             return try parseSequence(indent: indentOf(line))
         }
@@ -117,12 +153,15 @@ private struct BlockParser {
             skipIgnorable()
             guard let line = peek(), indentOf(line) == indent else { break }
             let body = content(line)
+            try rejectComplexKey(body)
             guard let colon = keyColon(in: body) else { break }
             let keyText = String(body[..<colon])
             let afterColon = String(body[body.index(after: colon)...])
             advance()
+            try rejectNodeProperties(keyText.trimmingCharacters(in: .whitespaces))
             let key = scalarString(keyText)
-            let valuePart = stripProperties(afterColon.trimmingCharacters(in: .whitespaces))
+            let valuePart = afterColon.trimmingCharacters(in: .whitespaces)
+            try rejectNodeProperties(valuePart)
             if valuePart.isEmpty {
                 entries.append((key, try parseEmptyMappingValue(keyIndent: indent)))
             } else if valuePart.hasPrefix("|") || valuePart.hasPrefix(">") {
@@ -242,15 +281,37 @@ private struct BlockParser {
         return result
     }
 
-    /// Drops leading tag (`!`, `!!`, `!<...>`) and anchor (`&name`) properties,
-    /// which this subset does not resolve, leaving the underlying node text.
-    private func stripProperties(_ text: String) -> String {
-        var remainder = Substring(text)
-        while let first = remainder.first, first == "!" || first == "&" || first == "*" {
-            let token = remainder.prefix(while: { $0 != " " && $0 != "\t" })
-            remainder = remainder.dropFirst(token.count).drop(while: { $0 == " " || $0 == "\t" })
+    /// Refuses a node that carries a tag (`!`, `!!`, `!<…>`), an anchor (`&name`) or an alias
+    /// (`*name`), none of which this subset resolves.
+    ///
+    /// Dropping them and reading what is left is the tempting alternative, and it is how this used
+    /// to work: `!!str 42` came back as the number 42, and `*base` — a reference to a value
+    /// defined elsewhere — came back as null. Both are answers the document never gave, and
+    /// nothing in the result marks them.
+    ///
+    /// None of the three characters can begin a plain scalar in YAML, so there is no valid input
+    /// this turns away by mistake.
+    private func rejectNodeProperties(_ text: String) throws {
+        guard let first = text.first else { return }
+        let kind: String
+        switch first {
+        case "!": kind = "tag"
+        case "&": kind = "anchor"
+        case "*": kind = "alias"
+        default: return
         }
-        return String(remainder)
+        let token = text.prefix(while: { $0 != " " && $0 != "\t" })
+        throw ParseError(.unsupportedConstruct("\(kind) '\(token)'"))
+    }
+
+    /// Refuses an explicit key, which this reads as an ordinary scalar and so gets wrong.
+    ///
+    /// `? [a, b]` on one line and `: value` on the next is a mapping whose key is a sequence.
+    /// Read line by line the `?` line looks like a plain scalar and the `: value` line like an
+    /// entry with an empty key, which is a different document altogether.
+    private func rejectComplexKey(_ body: String) throws {
+        guard body == "?" || body.hasPrefix("? ") || body.hasPrefix("?\t") else { return }
+        throw ParseError(.unsupportedConstruct("explicit key '?'"))
     }
 
     /// Gathers a plain scalar that folds across more-indented continuation lines
@@ -268,7 +329,8 @@ private struct BlockParser {
     }
 
     private mutating func parseInline(_ text: String) throws -> StructuredValue {
-        let trimmed = stripProperties(stripComment(text).trimmingCharacters(in: .whitespaces))
+        let trimmed = stripComment(text).trimmingCharacters(in: .whitespaces)
+        try rejectNodeProperties(trimmed)
         guard let first = trimmed.first else { return .null }
         if first == "[" || first == "{" || first == "\"" || first == "'" {
             var scanner = YAMLFlowScanner(trimmed)

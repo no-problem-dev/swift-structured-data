@@ -9,7 +9,10 @@ import StructuredDataCore
 /// Double quotes support the escapes YAML defines, including `\x`, `\u` and `\U`, with an escape
 /// naming an unpaired surrogate becoming U+FFFD; an unrecognised escape yields the character
 /// itself. Single quotes take no escapes at all beyond a doubled `''` for a literal quote.
-/// Anchors, aliases and tags are not recognised here, so they read as part of a plain scalar.
+///
+/// Anchors, aliases and tags are refused, exactly as in block context: `[*base]` is a reference to
+/// a value defined elsewhere, and reading it as the one-character-longer string `"*base"` would be
+/// a quiet lie about what the document holds.
 struct YAMLFlowScanner {
     private let chars: [Character]
     private var index: Int
@@ -35,7 +38,20 @@ struct YAMLFlowScanner {
         case "{": return try parseMapping()
         case "\"": return .string(try parseDoubleQuoted())
         case "'": return .string(try parseSingleQuoted())
-        default: return resolvePlain(readPlain(stopAt: [",", "]", "}"]))
+        default:
+            try rejectNodeProperty(ch)
+            return resolvePlain(readPlain(stopAt: [",", "]", "}"]))
+        }
+    }
+
+    /// None of `!`, `&` and `*` can begin a plain scalar in YAML; each introduces a node property
+    /// this scanner does not resolve, so meeting one means refusing rather than reading it as text.
+    private func rejectNodeProperty(_ first: Character) throws {
+        switch first {
+        case "!": throw ParseError(.unsupportedConstruct("tag in flow context"))
+        case "&": throw ParseError(.unsupportedConstruct("anchor in flow context"))
+        case "*": throw ParseError(.unsupportedConstruct("alias in flow context"))
+        default: return
         }
     }
 
@@ -83,7 +99,9 @@ struct YAMLFlowScanner {
         switch peek() {
         case "\"": return try parseDoubleQuoted()
         case "'": return try parseSingleQuoted()
-        default: return readPlain(stopAt: [":", ",", "}"]).trimmingCharacters(in: .whitespaces)
+        default:
+            if let first = peek() { try rejectNodeProperty(first) }
+            return readPlain(stopAt: [":", ",", "}"]).trimmingCharacters(in: .whitespaces)
         }
     }
 

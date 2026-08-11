@@ -40,6 +40,15 @@ public struct ParseError: Error, Sendable, CustomStringConvertible {
         case depthLimitExceeded(Int)
         case trailingData
         case malformed(String)
+
+        /// The input is valid for its format, but uses something this reader does not implement.
+        ///
+        /// This is not "your document is broken" — it is "this reader will not guess". A parser
+        /// that covers a subset has three options when it meets the rest: implement it, refuse it,
+        /// or quietly produce a value that is not what the document says. The third is the one
+        /// that costs the caller a bug they cannot see, so anything outside the subset arrives
+        /// here instead. The payload names the construct.
+        case unsupportedConstruct(String)
     }
 
     public let kind: Kind
@@ -63,6 +72,7 @@ public struct ParseError: Error, Sendable, CustomStringConvertible {
         case .depthLimitExceeded(let limit): return "nesting depth exceeded \(limit)\(suffix)"
         case .trailingData: return "unexpected trailing data\(suffix)"
         case .malformed(let reason): return "malformed input: \(reason)\(suffix)"
+        case .unsupportedConstruct(let construct): return "unsupported construct: \(construct)\(suffix)"
         }
     }
 }

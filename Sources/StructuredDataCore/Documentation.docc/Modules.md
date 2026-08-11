@@ -12,7 +12,7 @@ a number keep its precision until something asks for a concrete Swift type.
 |---|---|---|
 | `StructuredDataCore` | ``StructuredValue``, ``StructuredNumber``, ``OrderedObject``, the `Decoder`/`Encoder` backbone, the property wrappers | Foundation only |
 | `JSONParsing` | RFC 8259 parser and serializer, plus streaming and tolerant readers | `StructuredDataCore` |
-| `YAMLParsing` | A YAML 1.2 Core subset, with a serializer for round-tripping | `StructuredDataCore` |
+| `YAMLParsing` | A YAML 1.2 Core subset that throws on the constructs it does not implement, with a serializer for round-tripping | `StructuredDataCore` |
 | `XMLCoding` | A full XML tree and a declarative builder — deliberately not routed through ``StructuredValue`` | `StructuredDataCore` |
 
 There is no re-export. A target that names a `StructuredDataCore` type directly — most obviously
@@ -27,9 +27,10 @@ presents ``StructuredDecoding``. Swapping formats is a change at the composition
 ## What each reader accepts and rejects
 
 The three formats are not equally faithful to their specifications, and the differences are not
-symmetric. JSON is strict and reports precisely where it stopped. YAML and XML are subsets, and in
-YAML's case an unsupported construct is usually **discarded rather than reported** — which is the
-single most important thing to know before pointing it at input you did not write.
+symmetric. JSON is strict and reports precisely where it stopped. YAML and XML are subsets, and a
+subset has to decide what to do with the rest: here, both **refuse it rather than guess**. Neither
+is a validator, so plenty of genuinely broken input still gets through — but nothing outside the
+subset is quietly turned into a value the document does not contain.
 
 ### JSON — strict by default
 
@@ -50,18 +51,27 @@ unquoted keys, `NaN` and `Infinity`; each of those simply ends the read, so `{'a
 empty object rather than an error. It also never throws, which means "parsed nothing" and "parsed
 everything" look the same from the outside.
 
-### YAML — a subset, and quiet about it
+### YAML — a subset that says so
 
 `YAMLParser` covers what configuration files actually use: block and flow collections, plain and
 quoted scalars, literal and folded block scalars with chomping and explicit indent indicators,
 comments, and multi-document streams.
 
-What it does not cover is **discarded, not rejected**: anchors and aliases are stripped (an alias
-decodes as null), tags are stripped (`!!str 42` resolves as the number 42), complex keys are read as
-plain scalars, `%YAML` and `%TAG` directives are skipped, and tabs are not counted as indentation,
-so a tab-indented line lands in the wrong parent. Against the official YAML test suite it accepts
-most documents a conforming parser must reject. Treat it as a reader for input you control, not as a
-validator.
+What it does not cover **throws** ``ParseError/Kind/unsupportedConstruct(_:)``: tags, anchors and
+aliases in either context, complex keys, `%TAG` directives, and `%YAML` directives naming any
+version but 1.2. Each of these used to be stripped and whatever was left parsed, which turned
+`!!str 42` into the number 42 and an alias into null — answers the document never gave, with
+nothing in the result to mark them.
+
+Two gaps stay silent because neither can be told apart from ordinary content: a tab used as
+indentation counts as no indentation at all, so the line lands in the wrong parent, and a repeated
+key is kept alongside the first rather than resolved by any policy.
+
+Against the official YAML test suite this rejects 42% of the documents a conforming parser is
+required to reject, and reproduces 30% of the values in the documents it should accept — the rest
+being the constructs above. Refusing what it cannot read is not the same as validating what it can:
+this remains a reader for input you control. Both figures are asserted as floors in
+`ConformanceTests`.
 
 `YAMLScalarResolver` follows the 1.2 **Core** schema, which is the one that fixed the Norway
 problem: `yes`, `no`, `on` and `off` are strings. Only `true`/`True`/`TRUE` and

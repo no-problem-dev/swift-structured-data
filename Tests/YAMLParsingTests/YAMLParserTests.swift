@@ -44,6 +44,24 @@ struct YAMLParserTests {
         #expect(value.lit.string == "on")
     }
 
+    /// The Core schema admits exactly six spellings — lowercase, capitalised and uppercase — and
+    /// the match is not case-insensitive. `tRue` being a string is the rule working, not a gap in
+    /// it: the same line that keeps `no` a country code is what keeps this list closed.
+    @Test("真偽値は Core schema の 6 綴りちょうど")
+    func booleanSpellingsAreExactlyCoreSchema() throws {
+        for spelling in ["true", "True", "TRUE"] {
+            #expect(try parser.parse("v: \(spelling)").v.bool == true, "\(spelling) should be true")
+        }
+        for spelling in ["false", "False", "FALSE"] {
+            #expect(try parser.parse("v: \(spelling)").v.bool == false, "\(spelling) should be false")
+        }
+        for spelling in ["tRue", "TrUe", "fAlse", "y", "Y", "yes", "Yes", "n", "off", "ON"] {
+            let value = try parser.parse("v: \(spelling)")
+            #expect(value.v.bool == nil, "\(spelling) should not be a boolean")
+            #expect(value.v.string == spelling)
+        }
+    }
+
     @Test
     func coreSchemaScalars() throws {
         let value = try parser.parse("""

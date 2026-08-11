@@ -67,7 +67,34 @@ public struct StructuredNumber: Sendable, Hashable {
     /// Everything past 17 significant digits is lost, and the loss is silent. A magnitude beyond
     /// the IEEE-754 range becomes infinity rather than an error, one below it flushes to zero, and
     /// text that is not a number at all — reachable only through ``init(unchecked:)`` — gives NaN.
+    ///
+    /// This is the lenient accessor, for exploring a payload where a rough answer is what is
+    /// wanted. ``exactDouble`` is the one that refuses to answer instead of answering infinity.
     public var double: Double { Double(text) ?? .nan }
+
+    /// The value as a double, or nil when a double cannot hold it.
+    ///
+    /// The same conversion as ``double``, minus the two results that are not the number at all:
+    /// infinity, which is what a magnitude beyond the IEEE-754 range collapses to, and NaN, which
+    /// is what text outside the number grammar gives.
+    ///
+    /// **Rounding is not overflow, so rounding still happens here.** `0.1` has no exact double and
+    /// arrives rounded, and `1e-400` arrives as zero, because in both cases the double returned is
+    /// the nearest representable value to the number written. `1e400` has no nearest representable
+    /// value — infinity is not a large number, it is the absence of one — so this returns nil.
+    public var exactDouble: Double? {
+        guard let value = Double(text), value.isFinite else { return nil }
+        return value
+    }
+
+    /// The value as a float, or nil when a float cannot hold it, on the same terms as ``exactDouble``.
+    ///
+    /// The range is much narrower, so this refuses a good deal that ``exactDouble`` accepts:
+    /// `1e300` is an ordinary double and no float at all.
+    public var exactFloat: Float? {
+        guard let value = Float(text), value.isFinite else { return nil }
+        return value
+    }
 
     public static func == (lhs: StructuredNumber, rhs: StructuredNumber) -> Bool {
         lhs.canonical == rhs.canonical
