@@ -55,9 +55,9 @@ struct Settings: Codable {
 
 ## ドキュメント
 
-[**API リファレンスとガイド**](https://no-problem-dev.github.io/swift-structured-data/documentation/structureddatacore/) —
-[Getting Started](https://no-problem-dev.github.io/swift-structured-data/documentation/structureddatacore/gettingstarted/) と
-[Modules](https://no-problem-dev.github.io/swift-structured-data/documentation/structureddatacore/modules/) を含みます。
+[**API リファレンスとガイド**](Sources/StructuredDataCore/Documentation.docc) —
+[Getting Started](Sources/StructuredDataCore/Documentation.docc/GettingStarted.md) と
+[Modules](Sources/StructuredDataCore/Documentation.docc/Modules.md) を含みます。
 各パーサが何を受け入れ何を拒むかは Modules にあります。
 
 設計の全体像は [DESIGN.md](./DESIGN.md) を参照してください。

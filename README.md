@@ -57,9 +57,9 @@ struct Settings: Codable {
 
 ## Documentation
 
-[**API reference and guides**](https://no-problem-dev.github.io/swift-structured-data/documentation/structureddatacore/) —
-including [Getting Started](https://no-problem-dev.github.io/swift-structured-data/documentation/structureddatacore/gettingstarted/)
-and [Modules](https://no-problem-dev.github.io/swift-structured-data/documentation/structureddatacore/modules/),
+[**API reference and guides**](Sources/StructuredDataCore/Documentation.docc) —
+including [Getting Started](Sources/StructuredDataCore/Documentation.docc/GettingStarted.md)
+and [Modules](Sources/StructuredDataCore/Documentation.docc/Modules.md),
 which covers what each parser accepts and rejects.
 
 The design rationale, in Japanese, is in [DESIGN.md](./DESIGN.md).
